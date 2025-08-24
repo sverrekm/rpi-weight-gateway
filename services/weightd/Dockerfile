@@ -18,7 +18,8 @@ WORKDIR /app
 
 # Copy backend
 COPY services/weightd/requirements.txt /app/requirements.txt
-RUN pip install --prefer-binary -r /app/requirements.txt
+RUN python -m pip install --upgrade pip==23.2.1 setuptools==68.2.2 wheel==0.41.2 && \
+    pip install --no-binary=:all: -r /app/requirements.txt
 COPY services/weightd/app /app/app
 
 # Copy built web UI to static
