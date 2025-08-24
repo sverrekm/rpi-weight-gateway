@@ -6,10 +6,7 @@ import statistics
 from typing import Deque, Optional
 from collections import deque
 
-try:
-    import RPi.GPIO as GPIO  # type: ignore
-except Exception:  # pragma: no cover
-    GPIO = None  # type: ignore
+from .gpio_mock import GPIO
 
 
 class HX711Reader:
