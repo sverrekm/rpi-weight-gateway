@@ -7,15 +7,12 @@ COPY services/webui ./
 RUN npm run build
 
 # --- Stage 2: python runtime ---
-FROM --platform=$TARGETPLATFORM python:3.11-slim
+FROM --platform=$TARGETPLATFORM python:3.11-alpine
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Install runtime deps
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+# Install runtime deps (Alpine uses apk)
+RUN apk add --no-cache curl ca-certificates
 
 # Create app dir
 WORKDIR /app
