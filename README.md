@@ -10,10 +10,8 @@ A Dockerized Raspberry Pi 3 gateway that reads weight from HX711 (Load Cell Clic
 
 ## One-line install
 
-Replace <REPO_URL_RAW> with your raw Git URL to `install.sh` if needed.
-
 ```bash
-curl -fsSL https://<REPO_URL_RAW>/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/sverrekm/rpi-weight-gateway/main/install.sh | sudo bash
 ```
 
 Flags:
