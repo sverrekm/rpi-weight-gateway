@@ -24,8 +24,17 @@ if ! docker compose version >/dev/null 2>&1; then
   fi
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
+# Clone or update repository
+REPO_DIR="rpi-weight-gateway"
+if [ -d "$REPO_DIR" ]; then
+  echo "Updating existing repository..."
+  cd "$REPO_DIR"
+  git pull
+else
+  echo "Cloning repository..."
+  git clone https://github.com/sverrekm/rpi-weight-gateway.git
+  cd "$REPO_DIR"
+fi
 
 [ -f .env ] || cp .env.example .env
 
@@ -34,3 +43,4 @@ DOCKER_DEFAULT_PLATFORM=linux/arm/v7 docker compose build
 DOCKER_DEFAULT_PLATFORM=linux/arm/v7 docker compose up -d $WITH_PROFILES
 
 echo "Done. If you were added to docker group, log out/in."
+echo "Access the web UI at: http://$(hostname -I | awk '{print $1}'):8080"
