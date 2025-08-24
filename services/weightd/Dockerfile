@@ -13,8 +13,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Install runtime deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl ca-certificates netcat-traditional \
-    && rm -rf /var/lib/apt/lists/*
+    curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Create app dir
 WORKDIR /app
