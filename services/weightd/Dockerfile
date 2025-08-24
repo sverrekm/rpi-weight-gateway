@@ -7,16 +7,18 @@ COPY services/webui ./
 RUN npm run build
 
 # --- Stage 2: python runtime ---
-FROM --platform=$TARGETPLATFORM python:3.11-slim-bookworm
+FROM --platform=$TARGETPLATFORM python:3.9-slim-bullseye
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1
 
 # Create app dir
 WORKDIR /app
 
 # Copy backend
 COPY services/weightd/requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN pip install --prefer-binary -r /app/requirements.txt
 COPY services/weightd/app /app/app
 
 # Copy built web UI to static
