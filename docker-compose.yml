@@ -1,0 +1,68 @@
+version: "3.9"
+
+services:
+  weightd:
+    build:
+      context: .
+      dockerfile: services/weightd/Dockerfile
+    container_name: weightd
+    privileged: true
+    environment:
+      - MQTT_HOST=${MQTT_HOST}
+      - MQTT_PORT=${MQTT_PORT}
+      - MQTT_USER=${MQTT_USER}
+      - MQTT_PASS=${MQTT_PASS}
+      - WEIGHT_TOPIC=${WEIGHT_TOPIC}
+      - STATUS_TOPIC=${STATUS_TOPIC}
+      - CMD_TOPIC=${CMD_TOPIC}
+      - GPIO_DOUT=${GPIO_DOUT}
+      - GPIO_SCK=${GPIO_SCK}
+      - SAMPLE_RATE=${SAMPLE_RATE}
+      - MEDIAN_WINDOW=${MEDIAN_WINDOW}
+      - SCALE=${SCALE}
+      - OFFSET=${OFFSET}
+      - WIFI_AP_SSID=${WIFI_AP_SSID}
+      - WIFI_AP_PASS=${WIFI_AP_PASS}
+      - AP_COUNTRY=${AP_COUNTRY}
+      - DEMO_MODE=${DEMO_MODE}
+      - VERSION=0.1.0
+    volumes:
+      - ./data:/data
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/api/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    # No hard depends_on for mqtt so the service can run without broker
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: mqtt
+    profiles: ["mqtt"]
+    restart: unless-stopped
+    volumes:
+      - ./services/mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./data/mosquitto:/mosquitto/data
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-h", "127.0.0.1", "-t", "$$SYS/broker/version", "-C", "1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  wifi-connect:
+    image: balenablocks/wifi-connect:latest
+    container_name: wifi-connect
+    profiles: ["wifi"]
+    network_mode: host
+    environment:
+      - PORTAL_SSID=${WIFI_AP_SSID}
+      - PORTAL_PASSPHRASE=${WIFI_AP_PASS}
+      - WIFI_COUNTRY=${AP_COUNTRY}
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+
+volumes: {}
