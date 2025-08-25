@@ -7,7 +7,7 @@ COPY services/webui ./
 RUN npm run build
 
 # --- Stage 2: python runtime ---
-FROM --platform=$TARGETPLATFORM python:3.9-slim-bullseye
+FROM --platform=$TARGETPLATFORM python:3.9-slim-buster
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
