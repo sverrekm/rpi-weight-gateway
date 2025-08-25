@@ -1,5 +1,5 @@
 # --- Stage 1: build web UI ---
-FROM --platform=$BUILDPLATFORM arm32v7/node:20-alpine AS webui
+FROM arm32v7/node:18-slim AS webui
 WORKDIR /app
 COPY services/webui/package.json ./
 RUN npm install
@@ -7,7 +7,7 @@ COPY services/webui ./
 RUN npm run build
 
 # --- Stage 2: python runtime ---
-FROM --platform=$TARGETPLATFORM arm32v7/python:3.9-slim
+FROM arm32v7/python:3.9-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
