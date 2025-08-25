@@ -1,33 +1,25 @@
-# --- Stage 1: build web UI ---
-FROM --platform=linux/arm/v7 node:16-buster AS webui
-WORKDIR /app
-COPY services/webui/package.json ./
-RUN npm cache clean --force && npm install --jobs=1 --verbose
-COPY services/webui ./
-RUN npm run build
-
-# --- Stage 2: python runtime ---
+# --- Stage 1: python runtime ---
 FROM --platform=linux/arm/v7 python:3.9-buster
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    DATA_DIR=/data
 
 # Create app dir
 WORKDIR /app
 
 # Copy backend
 COPY services/weightd/requirements.txt /app/requirements.txt
-RUN python -m pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r /app/requirements.txt
-COPY services/weightd/app /app/app
+RUN pip install -r requirements.txt
 
-# Copy built web UI to static
-COPY --from=webui /app/dist /app/app/static
+# Copy pre-built static files from webui
+COPY services/webui/dist /app/static
+
+COPY services/weightd /app
 
 # Create data dir
 VOLUME ["/data"]
-ENV DATA_DIR=/data
 
-EXPOSE 8080
-CMD ["python", "-m", "app.main"]
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
