@@ -13,6 +13,7 @@ pip-delete-this-directory.txt
 
 # Build outputs
 dist/
+!services/webui/dist/
 build/
 *.egg-info/
 
