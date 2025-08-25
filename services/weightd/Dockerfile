@@ -1,5 +1,5 @@
 # --- Stage 1: build web UI ---
-FROM arm32v7/node:18-slim AS webui
+FROM arm32v7/node:18-buster AS webui
 WORKDIR /app
 COPY services/webui/package.json ./
 RUN npm install
