@@ -2,7 +2,7 @@
 FROM arm32v7/node:16-buster AS webui
 WORKDIR /app
 COPY services/webui/package.json ./
-RUN npm cache clean --force && npm install --jobs=1
+RUN npm cache clean --force && npm install --jobs=1 --verbose
 COPY services/webui ./
 RUN npm run build
 
