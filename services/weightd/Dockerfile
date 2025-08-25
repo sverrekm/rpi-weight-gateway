@@ -1,5 +1,5 @@
 # --- Stage 1: build web UI ---
-FROM arm32v7/node:16-buster AS webui
+FROM --platform=linux/arm/v7 node:16-buster AS webui
 WORKDIR /app
 COPY services/webui/package.json ./
 RUN npm cache clean --force && npm install --jobs=1 --verbose
@@ -7,7 +7,7 @@ COPY services/webui ./
 RUN npm run build
 
 # --- Stage 2: python runtime ---
-FROM arm32v7/python:3.9-buster
+FROM --platform=linux/arm/v7 python:3.9-buster
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
