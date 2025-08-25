@@ -18,8 +18,12 @@ WORKDIR /app
 
 # Copy backend
 COPY services/weightd/requirements.txt /app/requirements.txt
-RUN python -m pip install --upgrade pip==23.2.1 setuptools==68.2.2 wheel==0.41.2 && \
-    pip install --no-binary=:all: -r /app/requirements.txt
+RUN python -m pip install --upgrade pip==23.2.1 setuptools==68.2.2 wheel==0.41.2
+RUN pip install --no-binary=:all: fastapi==0.103.2
+RUN pip install --no-binary=:all: uvicorn==0.23.2
+RUN pip install --no-binary=:all: pydantic==1.10.13
+RUN pip install --no-binary=:all: paho-mqtt==1.6.1
+RUN pip install --no-binary=:all: python-multipart==0.0.9
 COPY services/weightd/app /app/app
 
 # Copy built web UI to static
