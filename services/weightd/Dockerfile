@@ -11,7 +11,8 @@ WORKDIR /app
 
 # Copy backend
 COPY services/weightd/requirements.txt /app/requirements.txt
-RUN pip install -r requirements.txt
+RUN python -m pip install --upgrade --no-cache-dir pip setuptools wheel \
+    && pip install --no-cache-dir --no-compile --prefer-binary -r requirements.txt
 
 # Copy pre-built static files from webui
 COPY services/webui/dist /app/static
