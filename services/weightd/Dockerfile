@@ -7,7 +7,7 @@ COPY services/webui ./
 RUN npm run build
 
 # --- Stage 2: python runtime ---
-FROM arm32v7/python:3.9-slim
+FROM arm32v7/python:3.9-buster
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
