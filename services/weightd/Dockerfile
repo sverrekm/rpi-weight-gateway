@@ -11,8 +11,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 ## Install build dependencies to allow source builds when ARM wheels are missing
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential python3-dev git libffi-dev libssl-dev \
+RUN echo 'Acquire::CompressionTypes::Order:: "gz";' > /etc/apt/apt.conf.d/99force-gz \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+       build-essential python3-dev git libffi-dev libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy backend
