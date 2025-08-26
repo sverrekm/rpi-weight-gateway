@@ -1,8 +1,5 @@
-version: "3.9"
-
 services:
   weightd:
-    platform: linux/arm/v7
     build:
       context: .
       dockerfile: services/weightd/Dockerfile
@@ -31,7 +28,7 @@ services:
       - ./data:/data
     network_mode: host
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
       interval: 15s
       timeout: 3s
       retries: 10
@@ -66,4 +63,4 @@ services:
       - NET_ADMIN
     restart: unless-stopped
 
-volumes: {}
+
