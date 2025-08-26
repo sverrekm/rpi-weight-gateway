@@ -1,5 +1,5 @@
-# --- Stage 1: python runtime (Variant B: ARMv7 / Python 3.9 Bullseye) ---
-FROM python:3.9-bullseye
+# --- Stage 1: python runtime (RPi3 ARMv7 / Python 3.9 Buster) ---
+FROM arm32v7/python:3.9-buster
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
