@@ -1,5 +1,5 @@
 # --- Stage 1: runtime (RPi3 ARMv7 / Debian Bullseye + Python 3) ---
-FROM arm32v7/debian:bullseye
+FROM debian:bullseye
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
