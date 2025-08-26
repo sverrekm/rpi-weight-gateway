@@ -24,8 +24,9 @@ RUN python -m pip install --upgrade pip setuptools wheel \
     && pip debug --verbose \
     && pip install --no-cache-dir --prefer-binary -r requirements.txt
 
-# Copy pre-built static files from webui
-COPY services/webui/dist /app/static
+# Copy pre-built static files from webui into the Python package directory
+# main.py expects STATIC_DIR relative to the "app" package directory
+COPY services/webui/dist /app/app/static
 
 COPY services/weightd /app
 
@@ -33,4 +34,4 @@ COPY services/weightd /app
 VOLUME ["/data"]
 
 EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
