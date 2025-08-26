@@ -5,6 +5,7 @@ services:
       dockerfile: services/weightd/Dockerfile
     container_name: weightd
     privileged: true
+    restart: unless-stopped
     environment:
       - MQTT_HOST=${MQTT_HOST}
       - MQTT_PORT=${MQTT_PORT}

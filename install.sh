@@ -39,8 +39,9 @@ fi
 [ -f .env ] || cp .env.example .env
 
 docker compose pull || true
-DOCKER_DEFAULT_PLATFORM=linux/arm/v7 docker compose build
-DOCKER_DEFAULT_PLATFORM=linux/arm/v7 docker compose up -d $WITH_PROFILES
+# Build without BuildKit/Buildx for better compatibility on Raspberry Pi
+DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0 docker compose build
+DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0 docker compose up -d $WITH_PROFILES
 
 echo "Done. If you were added to docker group, log out/in."
-echo "Access the web UI at: http://$(hostname -I | awk '{print $1}'):8080"
+echo "Access the web UI at: http://$(hostname -I | awk '{print $1}'):8000"
