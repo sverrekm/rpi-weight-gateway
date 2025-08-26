@@ -1,5 +1,5 @@
 # --- Stage 1: python runtime ---
-FROM arm32v7/python:3.9-bullseye
+FROM arm32v7/python:3.9-buster
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
