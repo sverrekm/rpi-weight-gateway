@@ -1,5 +1,5 @@
-# --- Stage 1: python runtime (RPi3 ARMv7 / Python 3.9 Buster) ---
-FROM arm32v7/python:3.9-buster
+# --- Stage 1: runtime (RPi3 ARMv7 / Debian Bullseye + Python 3) ---
+FROM arm32v7/debian:bullseye
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -10,17 +10,18 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Create app dir
 WORKDIR /app
 
-## Install build dependencies to allow source builds when ARM wheels are missing
+## Install Python and build dependencies (avoid apt segfaults by forcing gz indices)
 RUN echo 'Acquire::CompressionTypes::Order:: "gz";' > /etc/apt/apt.conf.d/99force-gz \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-       build-essential python3-dev git libffi-dev libssl-dev \
+       python3 python3-pip python3-dev \
+       build-essential git libffi-dev libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy backend
 COPY services/weightd/requirements.txt /app/requirements.txt
 ## Upgrade pip tooling separately for clearer logs, then install deps preferring wheels
-RUN python -m pip install --upgrade pip setuptools wheel \
+RUN python3 -m pip install --upgrade pip setuptools wheel \
     && pip debug --verbose \
     && pip install --no-cache-dir --prefer-binary -r requirements.txt
 
