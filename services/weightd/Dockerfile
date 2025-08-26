@@ -1,9 +1,10 @@
 # --- Stage 1: python runtime ---
-FROM --platform=linux/arm/v7 python:3.9-buster
+FROM python:3.9-bullseye
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
+    PIP_NO_BUILD_ISOLATION=1 \
     DATA_DIR=/data
 
 # Create app dir
@@ -11,8 +12,9 @@ WORKDIR /app
 
 # Copy backend
 COPY services/weightd/requirements.txt /app/requirements.txt
-RUN python -m pip install --upgrade --no-cache-dir pip setuptools wheel \
-    && pip install --no-cache-dir --no-compile --prefer-binary -r requirements.txt
+RUN python -m pip install --no-cache-dir \
+        'pip<24.1' 'setuptools<69' 'wheel<0.42' \
+    && pip install -vv --no-cache-dir --only-binary=:all: -r requirements.txt
 
 # Copy pre-built static files from webui
 COPY services/webui/dist /app/static
