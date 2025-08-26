@@ -44,4 +44,4 @@ def load_config() -> Config:
 
 def save_config(cfg: Config) -> None:
     ensure_data_dir()
-    CONFIG_PATH.write_text(json.dumps(cfg.model_dump(), indent=2))
+    CONFIG_PATH.write_text(json.dumps(cfg.dict(), indent=2))

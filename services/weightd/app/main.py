@@ -147,7 +147,7 @@ class AppContext:
                 last_status = now
                 if self.cfg.mqtt_host:
                     h = self.health_info()
-                    self.mqtt.publish(self.cfg.status_topic, h.model_dump(), qos=0)
+                    self.mqtt.publish(self.cfg.status_topic, h.dict(), qos=0)
 
 
 ctx = AppContext()

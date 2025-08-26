@@ -26,7 +26,7 @@ class WeightHub:
         dead = []
         for ws in self.active:
             try:
-                await ws.send_json(reading.model_dump())
+                await ws.send_json(reading.dict())
             except Exception:
                 dead.append(ws)
         for ws in dead:
@@ -41,7 +41,7 @@ def create_router(ctx) -> APIRouter:
     @router.get("/api/health", response_model=Health)
     async def health():
         info = ctx.health_info()
-        return JSONResponse(info.model_dump())
+        return JSONResponse(info.dict())
 
     @router.get("/api/reading", response_model=Reading)
     async def get_reading():
