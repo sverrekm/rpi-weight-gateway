@@ -13,6 +13,10 @@ const $known = qs('#knownGrams');
 const $calibStatus = qs('#calibStatus');
 const $cfgForm = qs('#cfgForm');
 const $cfgStatus = qs('#cfgStatus');
+const $ws = qs('#ws');
+const $lastTs = qs('#lastTs');
+const $gpioPresets = qs('#gpioPresets');
+let currentCfg = {};
 
 function fmtUptime(s) {
   const d = Math.floor(s / 86400);
@@ -40,6 +44,7 @@ async function loadHealth() {
 async function loadConfig() {
   const r = await fetch('/api/config');
   const cfg = await r.json();
+  currentCfg = cfg;
   for (const [k, v] of Object.entries(cfg)) {
     const el = $cfgForm.elements.namedItem(k);
     if (!el) continue;
@@ -47,21 +52,40 @@ async function loadConfig() {
   }
 }
 
+function toInt(v) { const n = parseInt(v, 10); return Number.isFinite(n) ? n : undefined; }
+function toFloat(v) { const n = parseFloat(v); return Number.isFinite(n) ? n : undefined; }
+
 async function saveConfig(e) {
   e.preventDefault();
-  const body = {};
+  // Start from currentCfg to avoid losing values when some inputs are empty
+  const body = { ...currentCfg };
   for (const el of $cfgForm.elements) {
     if (!el.name) continue;
-    if (el.type === 'checkbox') body[el.name] = el.checked;
-    else if (el.type === 'number') body[el.name] = el.value === '' ? null : Number(el.value);
-    else body[el.name] = el.value === '' ? null : el.value;
+    if (el.type === 'checkbox') { body[el.name] = el.checked; continue; }
+    if (el.type === 'number') {
+      // Typed parsing by field name
+      if (['mqtt_port','gpio_dout','gpio_sck','sample_rate','median_window'].includes(el.name)) {
+        const v = toInt(el.value);
+        if (v !== undefined) body[el.name] = v;
+      } else if (['scale','offset'].includes(el.name)) {
+        const v = toFloat(el.value);
+        if (v !== undefined) body[el.name] = v;
+      } else {
+        const v = toFloat(el.value);
+        if (v !== undefined) body[el.name] = v;
+      }
+      continue;
+    }
+    if (el.value !== '') body[el.name] = el.value; // keep existing if empty
   }
   $cfgStatus.textContent = 'Saving...';
   try {
     const r = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!r.ok) throw new Error(await r.text());
+    const saved = await r.json().catch(()=>null);
+    if (saved) currentCfg = saved;
     await loadConfig();
-    $cfgStatus.textContent = 'Saved ✓';
+    $cfgStatus.textContent = 'Saved ✓ (applied)';
     setTimeout(()=> $cfgStatus.textContent = '', 2000);
   } catch (e) {
     $cfgStatus.textContent = 'Error: ' + e.message;
@@ -74,16 +98,27 @@ async function post(path, body) {
   return r.json().catch(()=>({}));
 }
 
+function updateWs(status, ok) {
+  if (!$ws) return;
+  $ws.textContent = `WS: ${status}`;
+  $ws.className = 'chip ' + (ok ? 'ok' : 'bad');
+}
+
 function connectWS() {
   let proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}/ws/weight`);
+  updateWs('connecting', false);
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
     $grams.textContent = (Math.round(msg.grams * 10) / 10).toFixed(1);
     $stable.textContent = msg.stable ? 'stable' : 'unstable';
     $stable.className = msg.stable ? 'stable on' : 'stable off';
+    if ($lastTs) $lastTs.textContent = msg.ts || '—';
+    updateWs('connected', true);
   };
-  ws.onclose = () => setTimeout(connectWS, 2000);
+  ws.onopen = () => updateWs('connected', true);
+  ws.onerror = () => updateWs('error', false);
+  ws.onclose = () => { updateWs('disconnected', false); setTimeout(connectWS, 2000); };
 }
 
 function bindActions() {
@@ -102,6 +137,18 @@ function bindActions() {
     }
   });
   $cfgForm.addEventListener('submit', saveConfig);
+  if ($gpioPresets) {
+    $gpioPresets.addEventListener('change', () => {
+      if (!$gpioPresets.value) return;
+      try {
+        const preset = JSON.parse($gpioPresets.value);
+        for (const [k, v] of Object.entries(preset)) {
+          const el = $cfgForm.elements.namedItem(k);
+          if (el) el.value = v;
+        }
+      } catch {}
+    });
+  }
 }
 
 async function init() {
