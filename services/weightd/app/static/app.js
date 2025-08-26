@@ -136,7 +136,13 @@ function bindActions() {
       $calibStatus.textContent = 'Error: ' + e.message;
     }
   });
-  $cfgForm.addEventListener('submit', saveConfig);
+  // Save via button to prevent browser form navigation
+  const $btnSave = document.getElementById('btnSave');
+  if ($btnSave) $btnSave.addEventListener('click', (e)=> saveConfig(e));
+  // Prevent Enter key from submitting the form
+  $cfgForm.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); }
+  });
   if ($gpioPresets) {
     $gpioPresets.addEventListener('change', () => {
       if (!$gpioPresets.value) return;
