@@ -48,6 +48,14 @@ async function loadBroker() {
         $brokerStatus.textContent = `Broker: ${s.running ? 'running' : 'stopped'} @ ${s.host}:${s.port}`;
         $brokerStatus.className = 'chip ' + (s.running ? 'ok' : 'bad');
       }
+      // enable/disable controls
+      const canCtrl = !!s.control_capable;
+      if ($btnBrokerRestart) $btnBrokerRestart.disabled = !canCtrl;
+      if ($btnBrokerStart) $btnBrokerStart.disabled = !canCtrl;
+      if ($btnBrokerStop) $btnBrokerStop.disabled = !canCtrl;
+      if (!canCtrl && $brokerMsg) {
+        $brokerMsg.textContent = 'Control disabled: Docker socket not mounted in weightd container';
+      }
     }
   } catch {}
   // config

@@ -94,7 +94,8 @@ persistence_location /mosquitto/data/
         except Exception:
             running = False
         exists = BROKER_CONF_PATH.exists()
-        return {"running": running, "host": host, "port": port, "config_exists": exists}
+        control_capable = os.path.exists("/var/run/docker.sock")
+        return {"running": running, "host": host, "port": port, "config_exists": exists, "control_capable": control_capable}
 
     @router.get("/api/broker/config")
     async def get_broker_config():
