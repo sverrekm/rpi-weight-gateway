@@ -16,6 +16,7 @@ from .hx711 import HX711Reader
 from .mqtt_client import MQTTClient
 from .wifi_detect import has_internet, current_ip, current_ssid
 from .models import Health, WiFiInfo, Config
+from .display_serial import DisplaySerial
 from . import api_routes
 
 
@@ -45,6 +46,19 @@ class AppContext:
             cmd_topic=self.cfg.cmd_topic,
         )
         self._publisher_task: Optional[asyncio.Task] = None
+        # Display
+        self.display = DisplaySerial(
+            port=self.cfg.serial_port,
+            baudrate=self.cfg.baudrate,
+            databits=self.cfg.databits,
+            parity=self.cfg.parity,
+            stopbits=self.cfg.stopbits,
+            dp=self.cfg.dp,
+            unit=self.cfg.unit,
+            address=self.cfg.address,
+        )
+        self._last_display_value: Optional[float] = None
+        self._last_display_sent: float = 0.0
 
     def _on_cmd(self, payload: dict) -> None:
         action = payload.get("action")
@@ -124,6 +138,17 @@ class AppContext:
         )
         self.mqtt.start()
         save_config(self.cfg)
+        # Update display configuration
+        self.display.update_config(
+            port=new_cfg.serial_port,
+            baudrate=new_cfg.baudrate,
+            databits=new_cfg.databits,
+            parity=new_cfg.parity,
+            stopbits=new_cfg.stopbits,
+            dp=new_cfg.dp,
+            unit=new_cfg.unit,
+            address=new_cfg.address,
+        )
 
     def save_config(self) -> None:
         save_config(self.cfg)
@@ -162,6 +187,23 @@ class AppContext:
                     {"grams": grams, "ts": dt.datetime.utcnow().isoformat() + "Z", "stable": self.stable},
                     qos=0,
                 )
+            # Send to display when enabled and stable
+            if self.cfg.display_enabled and self.stable:
+                try:
+                    now = time.time()
+                    # throttle to ~5 Hz and only on meaningful change based on decimals
+                    resolution = 10 ** (-max(0, int(self.cfg.dp)))
+                    changed = (
+                        self._last_display_value is None
+                        or abs(grams - float(self._last_display_value)) >= resolution
+                    )
+                    if changed and (now - self._last_display_sent) > 0.2:
+                        self.display.send(grams)
+                        self._last_display_value = float(grams)
+                        self._last_display_sent = now
+                except Exception:
+                    # Ignore display errors to not affect main loop
+                    pass
             # Status less frequently
             now = time.time()
             if now - last_status > status_interval:

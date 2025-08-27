@@ -23,6 +23,16 @@ DEFAULT = Config(
     scale=float(os.getenv("SCALE", "1.0")),
     offset=float(os.getenv("OFFSET", "0.0")),
     demo_mode=os.getenv("DEMO_MODE", "false").lower() == "true",
+    # Display defaults
+    display_enabled=os.getenv("DISPLAY_ENABLED", "false").lower() == "true",
+    serial_port=os.getenv("SERIAL_PORT") or None,
+    baudrate=int(os.getenv("SERIAL_BAUD", "9600")),
+    databits=int(os.getenv("SERIAL_DATABITS", "7")),
+    parity=os.getenv("SERIAL_PARITY", "E"),
+    stopbits=int(os.getenv("SERIAL_STOPBITS", "1")),
+    dp=int(os.getenv("DISPLAY_DP", "2")),
+    unit=os.getenv("DISPLAY_UNIT", "kg"),
+    address=os.getenv("DISPLAY_ADDR") or None,
 )
 
 

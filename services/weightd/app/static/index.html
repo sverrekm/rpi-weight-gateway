@@ -41,6 +41,27 @@
       </div>
     </section>
 
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Display</h2>
+      <span class="muted">Test serial display output</span>
+    </div>
+    <div class="grid">
+      <label style="grid-column:1/-1">Send Text
+        <input id="dispText" placeholder="Hello" />
+      </label>
+      <label>Send Grams
+        <input id="dispGrams" type="number" step="0.01" placeholder="123.45" />
+      </label>
+    </div>
+    <div class="actions">
+      <button id="btnDispSendText" type="button">Send Text</button>
+      <button id="btnDispSendGrams" type="button">Send Grams</button>
+      <span id="dispMsg"></span>
+    </div>
+    <p class="hint">Ensure Display is enabled and serial parameters are correct, then use Test to verify output.</p>
+  </section>
+
     <section class="panel">
       <div class="panel-head">
         <h2>Configuration</h2>
@@ -93,6 +114,30 @@
               <label>Weight Topic <input name="weight_topic" /></label>
               <label>Status Topic <input name="status_topic" /></label>
               <label>Cmd Topic <input name="cmd_topic" /></label>
+            </div>
+          </details>
+
+          <details style="grid-column:1/-1;">
+            <summary>Display (ND5052)</summary>
+            <div class="grid" style="margin-top:8px;">
+              <label>Enable Display
+                <input name="display_enabled" type="checkbox" />
+                <small class="hint">Send stable readings to serial display</small>
+              </label>
+              <label>Serial Port <input name="serial_port" placeholder="/dev/ttyUSB0" /></label>
+              <label>Baudrate <input name="baudrate" type="number" min="1200" step="100" /></label>
+              <label>Data bits <input name="databits" type="number" min="7" max="8" /></label>
+              <label>Parity
+                <select name="parity">
+                  <option value="E">Even</option>
+                  <option value="N">None</option>
+                  <option value="O">Odd</option>
+                </select>
+              </label>
+              <label>Stop bits <input name="stopbits" type="number" min="1" max="2" /></label>
+              <label>Decimals (DP) <input name="dp" type="number" min="0" max="4" /></label>
+              <label>Unit <input name="unit" placeholder="kg" /></label>
+              <label>Address <input name="address" placeholder="00-99 (optional)" /></label>
             </div>
           </details>
         </div>

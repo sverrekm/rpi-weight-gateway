@@ -24,9 +24,21 @@ services:
       - WIFI_AP_PASS=${WIFI_AP_PASS}
       - AP_COUNTRY=${AP_COUNTRY}
       - DEMO_MODE=${DEMO_MODE}
+      # Display / Serial (optional)
+      - DISPLAY_ENABLED=${DISPLAY_ENABLED}
+      - SERIAL_PORT=${SERIAL_PORT}
+      - SERIAL_BAUD=${SERIAL_BAUD}
+      - SERIAL_DATABITS=${SERIAL_DATABITS}
+      - SERIAL_PARITY=${SERIAL_PARITY}
+      - SERIAL_STOPBITS=${SERIAL_STOPBITS}
+      - DISPLAY_DP=${DISPLAY_DP}
+      - DISPLAY_UNIT=${DISPLAY_UNIT}
+      - DISPLAY_ADDR=${DISPLAY_ADDR}
       - VERSION=0.1.0
     volumes:
       - ./data:/data
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
     network_mode: host
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]

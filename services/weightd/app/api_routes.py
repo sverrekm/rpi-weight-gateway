@@ -175,5 +175,21 @@ persistence_location /mosquitto/data/
         except WebSocketDisconnect:
             hub.disconnect(websocket)
 
+    @router.post("/api/display/test")
+    async def display_test(payload: dict):
+        if not ctx.cfg.display_enabled:
+            return JSONResponse({"error": "display not enabled"}, status_code=400)
+        try:
+            if "text" in payload and isinstance(payload.get("text"), str):
+                txt = str(payload.get("text"))[:32]
+                ctx.display.send_text(txt)
+                return {"status": "ok"}
+            if "grams" in payload and isinstance(payload.get("grams"), (int, float)):
+                ctx.display.send(float(payload.get("grams")))
+                return {"status": "ok"}
+            return JSONResponse({"error": "provide text or grams"}, status_code=400)
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
     ctx._ws_hub = hub
     return router

@@ -16,6 +16,12 @@ const $cfgStatus = qs('#cfgStatus');
 const $ws = qs('#ws');
 const $lastTs = qs('#lastTs');
 const $gpioPresets = qs('#gpioPresets');
+// Display UI elements
+const $dispText = qs('#dispText');
+const $dispGrams = qs('#dispGrams');
+const $btnDispSendText = qs('#btnDispSendText');
+const $btnDispSendGrams = qs('#btnDispSendGrams');
+const $dispMsg = qs('#dispMsg');
 // Broker UI elements
 const $brokerStatus = qs('#brokerStatus');
 const $brokerConf = qs('#brokerConf');
@@ -259,6 +265,21 @@ function bindActions() {
       } catch {}
     });
   }
+  // Display test handlers
+  if ($btnDispSendText) $btnDispSendText.addEventListener('click', async ()=>{
+    if (!$dispText) return;
+    $dispMsg.textContent = 'Sending...';
+    try { await post('/api/display/test', { text: $dispText.value || '' }); $dispMsg.textContent = 'Sent ✓'; setTimeout(()=> $dispMsg.textContent='', 1500); }
+    catch(e){ $dispMsg.textContent = 'Error: ' + e.message; }
+  });
+  if ($btnDispSendGrams) $btnDispSendGrams.addEventListener('click', async ()=>{
+    if (!$dispGrams) return;
+    const val = parseFloat($dispGrams.value);
+    if (!isFinite(val)) { $dispMsg.textContent = 'Enter a number'; return; }
+    $dispMsg.textContent = 'Sending...';
+    try { await post('/api/display/test', { grams: val }); $dispMsg.textContent = 'Sent ✓'; setTimeout(()=> $dispMsg.textContent='', 1500); }
+    catch(e){ $dispMsg.textContent = 'Error: ' + e.message; }
+  });
 }
 
 async function init() {

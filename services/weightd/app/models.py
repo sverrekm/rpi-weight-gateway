@@ -37,5 +37,27 @@ class Config(BaseModel):
     offset: float = 0.0
     demo_mode: bool = False
 
+    # Display settings (ND5052 via RS-232/RS-485)
+    display_enabled: bool = False
+    serial_port: Optional[str] = None  # e.g. /dev/ttyUSB0
+    baudrate: int = 9600
+    databits: int = 7  # 7 or 8
+    parity: str = "E"  # E (even), N, O
+    stopbits: int = 1   # 1 or 2
+    dp: int = 2         # decimals
+    unit: str = "kg"
+    address: Optional[str] = None  # '00'-'99' or None for unaddressed
+
 class CalibrateRequest(BaseModel):
     known_grams: float
+
+class DisplayConfigPayload(BaseModel):
+    display_enabled: bool
+    serial_port: Optional[str] = None
+    baudrate: int = 9600
+    databits: int = 7
+    parity: str = "E"
+    stopbits: int = 1
+    dp: int = 2
+    unit: str = "kg"
+    address: Optional[str] = None
