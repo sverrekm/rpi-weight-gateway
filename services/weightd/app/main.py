@@ -74,10 +74,12 @@ class AppContext:
     def tare(self) -> None:
         self.reader.tare()
         self.cfg.offset = self.reader.offset
+        self.save_config()
 
     def zero(self) -> None:
         self.reader.zero()
         self.cfg.offset = self.reader.offset
+        self.save_config()
 
     def calibrate(self, known_grams: float) -> float:
         scale = self.reader.calibrate(known_grams)

@@ -51,10 +51,12 @@ class HX711Reader:
                 pass
 
     def tare(self) -> None:
-        self.offset = self._read_raw_average(10) if not self.demo_mode else 0.0
+        # Set offset so current reading becomes zero
+        self.offset = self._read_raw_average(10)
 
     def zero(self) -> None:
-        self.offset = 0.0
+        # Same user-facing behavior as tare: zero the current load
+        self.offset = self._read_raw_average(10)
 
     def calibrate(self, known_grams: float) -> float:
         """Place known mass, compute scale so reading equals known_grams."""

@@ -105,6 +105,29 @@
     </section>
   </main>
 
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Broker</h2>
+      <span class="muted">Manage Mosquitto</span>
+    </div>
+    <div class="grid">
+      <div style="grid-column:1/-1">
+        <div class="chip" id="brokerStatus">Broker: unknown</div>
+      </div>
+      <label style="grid-column:1/-1">mosquitto.conf
+        <textarea id="brokerConf" rows="10" style="width:100%" placeholder="listener 1883 0.0.0.0\nallow_anonymous true\n..."></textarea>
+      </label>
+    </div>
+    <div class="actions">
+      <button id="btnBrokerSave" class="primary" type="button">Save Config</button>
+      <button id="btnBrokerRestart" type="button">Restart</button>
+      <button id="btnBrokerStart" type="button">Start</button>
+      <button id="btnBrokerStop" type="button">Stop</button>
+      <span id="brokerMsg"></span>
+    </div>
+    <p class="hint">Requires Docker access inside container for start/stop/restart. Config is stored at /data/mosquitto.conf and mounted into the MQTT service.</p>
+  </section>
+
   <script src="/app.js"></script>
 </body>
 </html>

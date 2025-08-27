@@ -16,6 +16,14 @@ const $cfgStatus = qs('#cfgStatus');
 const $ws = qs('#ws');
 const $lastTs = qs('#lastTs');
 const $gpioPresets = qs('#gpioPresets');
+// Broker UI elements
+const $brokerStatus = qs('#brokerStatus');
+const $brokerConf = qs('#brokerConf');
+const $brokerMsg = qs('#brokerMsg');
+const $btnBrokerSave = qs('#btnBrokerSave');
+const $btnBrokerRestart = qs('#btnBrokerRestart');
+const $btnBrokerStart = qs('#btnBrokerStart');
+const $btnBrokerStop = qs('#btnBrokerStop');
 let currentCfg = {};
 let wsConnected = false;
 let pollTimer = null;
@@ -30,6 +38,28 @@ function fmtUptime(s) {
   return `${d}d ${h}h ${m}m ${s}s`;
 }
 
+async function loadBroker() {
+  // status
+  try {
+    const rs = await fetch('/api/broker/status');
+    if (rs.ok) {
+      const s = await rs.json();
+      if ($brokerStatus) {
+        $brokerStatus.textContent = `Broker: ${s.running ? 'running' : 'stopped'} @ ${s.host}:${s.port}`;
+        $brokerStatus.className = 'chip ' + (s.running ? 'ok' : 'bad');
+      }
+    }
+  } catch {}
+  // config
+  try {
+    const rc = await fetch('/api/broker/config');
+    if (rc.ok) {
+      const j = await rc.json();
+      if ($brokerConf && typeof j.content === 'string') $brokerConf.value = j.content;
+    }
+  } catch {}
+}
+
 async function loadHealth() {
   try {
     const r = await fetch('/api/health');
@@ -41,6 +71,31 @@ async function loadHealth() {
   } catch (e) {
     $uptime.textContent = 'Uptime: -';
   }
+  // Broker bindings
+  if ($btnBrokerSave) $btnBrokerSave.addEventListener('click', async ()=>{
+    if (!$brokerConf) return;
+    $brokerMsg.textContent = 'Saving...';
+    try {
+      await post('/api/broker/config', { content: $brokerConf.value });
+      $brokerMsg.textContent = 'Saved ✓';
+      setTimeout(()=> $brokerMsg.textContent='', 1500);
+    } catch(e){ $brokerMsg.textContent = 'Error: '+e.message; }
+  });
+  if ($btnBrokerRestart) $btnBrokerRestart.addEventListener('click', async ()=>{
+    $brokerMsg.textContent = 'Restarting...';
+    try { await post('/api/broker/restart'); $brokerMsg.textContent = 'Restarted ✓'; loadBroker(); }
+    catch(e){ $brokerMsg.textContent = 'Error: '+e.message; }
+  });
+  if ($btnBrokerStart) $btnBrokerStart.addEventListener('click', async ()=>{
+    $brokerMsg.textContent = 'Starting...';
+    try { await post('/api/broker/start'); $brokerMsg.textContent = 'Started ✓'; loadBroker(); }
+    catch(e){ $brokerMsg.textContent = 'Error: '+e.message; }
+  });
+  if ($btnBrokerStop) $btnBrokerStop.addEventListener('click', async ()=>{
+    $brokerMsg.textContent = 'Stopping...';
+    try { await post('/api/broker/stop'); $brokerMsg.textContent = 'Stopped ✓'; loadBroker(); }
+    catch(e){ $brokerMsg.textContent = 'Error: '+e.message; }
+  });
 }
 
 async function loadConfig() {
@@ -87,6 +142,7 @@ async function saveConfig(e) {
     const saved = await r.json().catch(()=>null);
     if (saved) currentCfg = saved;
     await loadConfig();
+  await loadBroker();
     $cfgStatus.textContent = 'Saved ✓ (applied)';
     setTimeout(()=> $cfgStatus.textContent = '', 2000);
   } catch (e) {

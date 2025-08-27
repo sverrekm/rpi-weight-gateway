@@ -42,7 +42,7 @@ services:
     profiles: ["mqtt"]
     restart: unless-stopped
     volumes:
-      - ./services/mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./data/mosquitto.conf:/mosquitto/config/mosquitto.conf
       - ./data/mosquitto:/mosquitto/data
     network_mode: host
     healthcheck:
