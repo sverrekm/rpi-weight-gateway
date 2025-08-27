@@ -22,6 +22,9 @@ const $dispGrams = qs('#dispGrams');
 const $btnDispSendText = qs('#btnDispSendText');
 const $btnDispSendGrams = qs('#btnDispSendGrams');
 const $dispMsg = qs('#dispMsg');
+const $serialPortInput = qs('#serialPortInput');
+const $serialPorts = qs('#serialPorts');
+const $btnScanPorts = qs('#btnScanPorts');
 // Broker UI elements
 const $brokerStatus = qs('#brokerStatus');
 const $brokerConf = qs('#brokerConf');
@@ -110,6 +113,33 @@ async function loadHealth() {
     try { await post('/api/broker/stop'); $brokerMsg.textContent = 'Stopped ✓'; loadBroker(); }
     catch(e){ $brokerMsg.textContent = 'Error: '+e.message; }
   });
+  // Scan serial ports
+  if ($btnScanPorts) $btnScanPorts.addEventListener('click', async ()=>{
+    await loadSerialPorts(currentCfg.serial_port || '');
+  });
+}
+
+async function loadSerialPorts(currentValue) {
+  try {
+    if (!$serialPorts) return;
+    $serialPorts.innerHTML = '';
+    const r = await fetch('/api/display/ports');
+    if (!r.ok) throw new Error('scan failed');
+    const j = await r.json();
+    const ports = Array.isArray(j.ports) ? j.ports : [];
+    for (const p of ports) {
+      const val = p.device || '';
+      if (!val) continue;
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.label = p.name ? `${val} — ${p.name}` : val;
+      $serialPorts.appendChild(opt);
+    }
+    // Set current value into the input
+    if ($serialPortInput && currentValue) $serialPortInput.value = currentValue;
+  } catch (e) {
+    // ignore scan errors silently
+  }
 }
 
 async function loadConfig() {
@@ -121,6 +151,8 @@ async function loadConfig() {
     if (!el) continue;
     if (el.type === 'checkbox') el.checked = !!v; else el.value = v ?? '';
   }
+  // Populate serial ports after config load to preselect current value
+  await loadSerialPorts(cfg.serial_port || '');
 }
 
 function toInt(v) { const n = parseInt(v, 10); return Number.isFinite(n) ? n : undefined; }

@@ -124,7 +124,14 @@
                 <input name="display_enabled" type="checkbox" />
                 <small class="hint">Send stable readings to serial display</small>
               </label>
-              <label>Serial Port <input name="serial_port" placeholder="/dev/ttyUSB0" /></label>
+              <label style="grid-column:1/-1">Serial Port
+                <div style="display:flex; gap:8px; align-items:center;">
+                  <input name="serial_port" id="serialPortInput" list="serialPorts" placeholder="/dev/ttyUSB0" style="flex:1 1 auto" />
+                  <datalist id="serialPorts"></datalist>
+                  <button type="button" id="btnScanPorts">Scan</button>
+                </div>
+                <small class="hint">Type path or choose from suggestions after Scan.</small>
+              </label>
               <label>Baudrate <input name="baudrate" type="number" min="1200" step="100" /></label>
               <label>Data bits <input name="databits" type="number" min="7" max="8" /></label>
               <label>Parity

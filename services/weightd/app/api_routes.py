@@ -191,5 +191,19 @@ persistence_location /mosquitto/data/
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
+    @router.get("/api/display/ports")
+    async def display_ports():
+        try:
+            try:
+                from serial.tools import list_ports  # type: ignore
+            except Exception:
+                return {"ports": []}
+            items = []
+            for p in list_ports.comports():
+                items.append({"device": getattr(p, "device", None), "name": getattr(p, "description", "")})
+            return {"ports": items}
+        except Exception:
+            return {"ports": []}
+
     ctx._ws_hub = hub
     return router
