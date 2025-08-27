@@ -86,11 +86,31 @@ class AppContext:
 
     def update_config(self, new_cfg: Config) -> None:
         # Update runtime and persist
+        recreate_reader = (
+            new_cfg.gpio_dout != self.cfg.gpio_dout
+            or new_cfg.gpio_sck != self.cfg.gpio_sck
+            or new_cfg.demo_mode != self.cfg.demo_mode
+        )
         self.cfg = new_cfg
-        self.reader.scale = new_cfg.scale
-        self.reader.offset = new_cfg.offset
-        self.reader.sample_rate = new_cfg.sample_rate
-        self.reader.median_window = new_cfg.median_window
+        if recreate_reader:
+            try:
+                self.reader.close()
+            except Exception:
+                pass
+            self.reader = HX711Reader(
+                gpio_dout=new_cfg.gpio_dout,
+                gpio_sck=new_cfg.gpio_sck,
+                sample_rate=new_cfg.sample_rate,
+                median_window=new_cfg.median_window,
+                scale=new_cfg.scale,
+                offset=new_cfg.offset,
+                demo_mode=new_cfg.demo_mode,
+            )
+        else:
+            self.reader.scale = new_cfg.scale
+            self.reader.offset = new_cfg.offset
+            self.reader.sample_rate = new_cfg.sample_rate
+            self.reader.median_window = new_cfg.median_window
         self.mqtt.stop()
         self.mqtt = MQTTClient(
             host=new_cfg.mqtt_host,
@@ -128,11 +148,10 @@ class AppContext:
         self.mqtt.stop()
 
     async def _publisher(self):
-        interval = 1.0 / max(1, self.cfg.sample_rate)
         status_interval = 10.0
         last_status = 0.0
         while True:
-            await asyncio.sleep(interval)
+            await asyncio.sleep(1.0 / max(1, self.cfg.sample_rate))
             grams = self.read_grams()
             # Publish measurement
             if self.cfg.mqtt_host:

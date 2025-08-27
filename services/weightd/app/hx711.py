@@ -6,7 +6,7 @@ import statistics
 from typing import Deque, Optional
 from collections import deque
 
-from .gpio_mock import GPIO
+from .gpio_mock import GPIO, GPIO_IS_MOCK
 
 
 class HX711Reader:
@@ -31,7 +31,8 @@ class HX711Reader:
         self.median_window = max(1, median_window)
         self.scale = scale
         self.offset = offset
-        self.demo_mode = demo_mode
+        # If running on mock GPIO, force demo mode to avoid blocking reads
+        self.demo_mode = demo_mode or GPIO_IS_MOCK
         self._raw_window: Deque[float] = deque(maxlen=self.median_window)
         self._avg_window: Deque[float] = deque(maxlen=max(1, int(self.sample_rate)))
         self._t0 = time.time()

@@ -28,8 +28,17 @@ class MockGPIO:
     def cleanup():
         pass
 
+"""
+Provide GPIO bindings with a detection flag. If RPi.GPIO is unavailable,
+we expose a lightweight mock and set GPIO_IS_MOCK=True so callers can
+decide to switch to demo/synthetic behavior automatically.
+"""
+
 # Try to import RPi.GPIO, fall back to mock
 try:
-    import RPi.GPIO as GPIO
+    import RPi.GPIO as _RPIGPIO  # type: ignore
+    GPIO = _RPIGPIO
+    GPIO_IS_MOCK = False
 except ImportError:
     GPIO = MockGPIO()
+    GPIO_IS_MOCK = True
