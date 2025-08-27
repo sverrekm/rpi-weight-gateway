@@ -17,6 +17,7 @@ const $ws = qs('#ws');
 const $lastTs = qs('#lastTs');
 const $gpioPresets = qs('#gpioPresets');
 let currentCfg = {};
+let wsConnected = false;
 
 function fmtUptime(s) {
   const d = Math.floor(s / 86400);
@@ -104,6 +105,16 @@ function updateWs(status, ok) {
   $ws.className = 'chip ' + (ok ? 'ok' : 'bad');
 }
 
+function setUiConnected(connected) {
+  wsConnected = connected;
+  [$btnTare, $btnZero, $btnCal].forEach(btn => { if (btn) btn.disabled = !connected; });
+  if (!connected) {
+    if ($grams) $grams.textContent = '--.-';
+    if ($stable) { $stable.textContent = 'no data'; $stable.className = 'stable off'; }
+    if ($lastTs) $lastTs.textContent = '—';
+  }
+}
+
 function connectWS() {
   let proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}/ws/weight`);
@@ -115,10 +126,11 @@ function connectWS() {
     $stable.className = msg.stable ? 'stable on' : 'stable off';
     if ($lastTs) $lastTs.textContent = msg.ts || '—';
     updateWs('connected', true);
+    setUiConnected(true);
   };
-  ws.onopen = () => updateWs('connected', true);
-  ws.onerror = () => updateWs('error', false);
-  ws.onclose = () => { updateWs('disconnected', false); setTimeout(connectWS, 2000); };
+  ws.onopen = () => { updateWs('connected', true); setUiConnected(true); };
+  ws.onerror = () => { updateWs('error', false); setUiConnected(false); };
+  ws.onclose = () => { updateWs('disconnected', false); setUiConnected(false); setTimeout(connectWS, 2000); };
 }
 
 function bindActions() {
@@ -161,6 +173,7 @@ async function init() {
   await loadHealth();
   await loadConfig();
   bindActions();
+  setUiConnected(false);
   connectWS();
   setInterval(loadHealth, 5000);
 }

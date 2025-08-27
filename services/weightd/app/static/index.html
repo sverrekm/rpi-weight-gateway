@@ -48,40 +48,60 @@
       </div>
       <form id="cfgForm">
         <div class="grid">
-          <label>MQTT Host <input name="mqtt_host" /></label>
-          <label>MQTT Port <input name="mqtt_port" type="number" min="1" max="65535" /></label>
-          <label>MQTT User <input name="mqtt_user" /></label>
-          <label>MQTT Pass <input name="mqtt_pass" type="password" /></label>
-          <label>Weight Topic <input name="weight_topic" /></label>
-          <label>Status Topic <input name="status_topic" /></label>
-          <label>Cmd Topic <input name="cmd_topic" /></label>
-          <label>GPIO DOUT <input name="gpio_dout" type="number" /></label>
-          <label>GPIO SCK <input name="gpio_sck" type="number" /></label>
-          <div class="row">
-            <label style="width:100%">GPIO Presets
-              <select id="gpioPresets">
-                <option value="">Select preset…</option>
-                <option value='{"gpio_dout":5,"gpio_sck":6}'>Default (DOUT 5, SCK 6)</option>
-                <option value='{"gpio_dout":23,"gpio_sck":24}'>Alt A (DOUT 23, SCK 24)</option>
-                <option value='{"gpio_dout":20,"gpio_sck":21}'>Alt B (DOUT 20, SCK 21)</option>
-                <option value='{"gpio_dout":9,"gpio_sck":11}'>Alt C (DOUT 9, SCK 11)</option>
-                <option value='{"gpio_dout":25,"gpio_sck":11}'>Pi2 Click Socket 1 (DOUT 25, SCK 11)</option>
-                <option value='{"gpio_dout":24,"gpio_sck":11}'>Pi2 Click Socket 2 (DOUT 24, SCK 11)</option>
-              </select>
-            </label>
-          </div>
-          <label>Sample rate (Hz) <input name="sample_rate" type="number" min="1" max="80" /></label>
-          <label>Median window <input name="median_window" type="number" min="1" /></label>
-          <label>Scale <input name="scale" type="number" step="0.0001" /></label>
-          <label>Offset <input name="offset" type="number" step="0.0001" /></label>
-          <label>Demo mode <input name="demo_mode" type="checkbox" /></label>
+          <h3 style="grid-column:1/-1;margin:8px 0 0;">Basic</h3>
+          <label>GPIO DOUT
+            <input name="gpio_dout" type="number" />
+            <small class="hint">Pi2 Click Socket 1 → 25</small>
+          </label>
+          <label>GPIO SCK
+            <input name="gpio_sck" type="number" />
+            <small class="hint">Pi2 Click Socket 1 → 11</small>
+          </label>
+          <label style="width:100%">GPIO Presets
+            <select id="gpioPresets">
+              <option value="">Select preset…</option>
+              <option value='{"gpio_dout":25,"gpio_sck":11}'>Pi2 Click Socket 1 (DOUT 25, SCK 11)</option>
+              <option value='{"gpio_dout":24,"gpio_sck":11}'>Pi2 Click Socket 2 (DOUT 24, SCK 11)</option>
+              <option value='{"gpio_dout":5,"gpio_sck":6}'>Default (DOUT 5, SCK 6)</option>
+              <option value='{"gpio_dout":23,"gpio_sck":24}'>Alt A (DOUT 23, SCK 24)</option>
+              <option value='{"gpio_dout":20,"gpio_sck":21}'>Alt B (DOUT 20, SCK 21)</option>
+              <option value='{"gpio_dout":9,"gpio_sck":11}'>Alt C (DOUT 9, SCK 11)</option>
+            </select>
+          </label>
+          <label>Demo mode
+            <input name="demo_mode" type="checkbox" />
+            <small class="hint">Use to verify UI without sensor</small>
+          </label>
+
+          <details style="grid-column:1/-1;">
+            <summary>Advanced settings</summary>
+            <div class="grid" style="margin-top:8px;">
+              <label>Sample rate (Hz) <input name="sample_rate" type="number" min="1" max="80" /></label>
+              <label>Median window <input name="median_window" type="number" min="1" /></label>
+              <label>Scale <input name="scale" type="number" step="0.0001" /></label>
+              <label>Offset <input name="offset" type="number" step="0.0001" /></label>
+            </div>
+          </details>
+
+          <details style="grid-column:1/-1;">
+            <summary>MQTT</summary>
+            <div class="grid" style="margin-top:8px;">
+              <label>MQTT Host <input name="mqtt_host" /></label>
+              <label>MQTT Port <input name="mqtt_port" type="number" min="1" max="65535" /></label>
+              <label>MQTT User <input name="mqtt_user" /></label>
+              <label>MQTT Pass <input name="mqtt_pass" type="password" /></label>
+              <label>Weight Topic <input name="weight_topic" /></label>
+              <label>Status Topic <input name="status_topic" /></label>
+              <label>Cmd Topic <input name="cmd_topic" /></label>
+            </div>
+          </details>
         </div>
         <div class="actions">
           <button class="primary" id="btnSave" type="button">Save</button>
           <span id="cfgStatus"></span>
         </div>
       </form>
-      <p class="hint">Tip: If you don’t see readings, try Demo mode to validate the UI, then test GPIO presets above or consult your Pi2 Click shield pinout for the HX711 MikroBUS mapping.</p>
+      <p class="hint">If you don’t see readings: turn on Demo mode to validate UI, then try the Pi2 Click preset for your socket.</p>
     </section>
   </main>
 
