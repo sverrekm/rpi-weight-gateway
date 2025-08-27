@@ -18,6 +18,7 @@ const $lastTs = qs('#lastTs');
 const $gpioPresets = qs('#gpioPresets');
 let currentCfg = {};
 let wsConnected = false;
+let pollTimer = null;
 
 function fmtUptime(s) {
   const d = Math.floor(s / 86400);
@@ -115,6 +116,32 @@ function setUiConnected(connected) {
   }
 }
 
+async function fetchReadingOnce() {
+  try {
+    const r = await fetch('/api/reading');
+    if (!r.ok) throw new Error('read failed');
+    const msg = await r.json();
+    $grams.textContent = (Math.round(msg.grams * 10) / 10).toFixed(1);
+    $stable.textContent = msg.stable ? 'stable' : 'unstable';
+    $stable.className = msg.stable ? 'stable on' : 'stable off';
+    if ($lastTs) $lastTs.textContent = msg.ts || '—';
+    updateWs('polling', true);
+    setUiConnected(true);
+  } catch (_) {
+    updateWs('error', false);
+  }
+}
+
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(fetchReadingOnce, 1000);
+  fetchReadingOnce();
+}
+
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
 function connectWS() {
   let proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}/ws/weight`);
@@ -127,10 +154,11 @@ function connectWS() {
     if ($lastTs) $lastTs.textContent = msg.ts || '—';
     updateWs('connected', true);
     setUiConnected(true);
+    stopPolling();
   };
-  ws.onopen = () => { updateWs('connected', true); setUiConnected(true); };
-  ws.onerror = () => { updateWs('error', false); setUiConnected(false); };
-  ws.onclose = () => { updateWs('disconnected', false); setUiConnected(false); setTimeout(connectWS, 2000); };
+  ws.onopen = () => { updateWs('connected', true); setUiConnected(true); stopPolling(); };
+  ws.onerror = () => { updateWs('error', false); setUiConnected(false); startPolling(); };
+  ws.onclose = () => { updateWs('disconnected', false); setUiConnected(false); startPolling(); setTimeout(connectWS, 2000); };
 }
 
 function bindActions() {
@@ -175,6 +203,8 @@ async function init() {
   bindActions();
   setUiConnected(false);
   connectWS();
+  // kick off polling as immediate fallback until WS connects
+  startPolling();
   setInterval(loadHealth, 5000);
 }
 
