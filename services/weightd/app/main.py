@@ -203,8 +203,14 @@ async def _on_stop():
 # Fallback for SPA when StaticFiles not mounted during uvicorn reload
 @app.middleware("http")
 async def spa_fallback(request: Request, call_next):
-    if request.url.path.startswith("/api") or request.url.path.startswith("/ws"):
+    path = request.url.path
+    # Let API and WS pass through
+    if path.startswith("/api") or path.startswith("/ws"):
         return await call_next(request)
+    # If the path looks like a static asset (has a dot), let StaticFiles handle it
+    if "." in os.path.basename(path):
+        return await call_next(request)
+    # Otherwise, return index.html for SPA client-side routes
     if os.path.isdir(STATIC_DIR):
         index_path = os.path.join(STATIC_DIR, "index.html")
         if os.path.exists(index_path):
