@@ -35,6 +35,8 @@ class Config(BaseModel):
     median_window: int = 5
     scale: float = 1.0
     offset: float = 0.0
+    # Maximum capacity (span) in grams; 0 or None means unlimited/not set
+    max_capacity_g: float = 0.0
     demo_mode: bool = False
 
     # Display settings (ND5052 via RS-232/RS-485)

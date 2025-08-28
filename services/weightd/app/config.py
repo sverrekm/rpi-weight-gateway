@@ -49,6 +49,7 @@ DEFAULT = Config(
     median_window=getenv_int("MEDIAN_WINDOW", 5),
     scale=getenv_float("SCALE", 1.0),
     offset=getenv_float("OFFSET", 0.0),
+    max_capacity_g=getenv_float("MAX_CAPACITY_G", 0.0),
     demo_mode=os.getenv("DEMO_MODE", "false").lower() == "true",
     # Display defaults
     display_enabled=os.getenv("DISPLAY_ENABLED", "false").lower() == "true",

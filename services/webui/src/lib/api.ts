@@ -13,7 +13,18 @@ export type Config = {
   median_window: number
   scale: number
   offset: number
+  max_capacity_g: number
   demo_mode: boolean
+  // Display (ND5052)
+  display_enabled: boolean
+  serial_port?: string | null
+  baudrate: number
+  databits: number
+  parity: string
+  stopbits: number
+  dp: number
+  unit: string
+  address?: string | null
 }
 
 const base = '' // same origin (served by backend)
@@ -56,4 +67,57 @@ export async function calibrate(known_grams: number) {
   })
   if (!r.ok) throw new Error('calibrate failed')
   return r.json() as Promise<{ status: string; scale: number }>
+}
+
+// Broker APIs
+export async function getBrokerStatus(): Promise<{ running: boolean; host: string; port: number; config_exists: boolean; control_capable: boolean }>{
+  const r = await fetch(`${base}/api/broker/status`)
+  if (!r.ok) throw new Error('broker status failed')
+  return r.json()
+}
+
+export async function getBrokerConfig(): Promise<{ content: string }>{
+  const r = await fetch(`${base}/api/broker/config`)
+  if (!r.ok) throw new Error('broker config failed')
+  return r.json()
+}
+
+export async function setBrokerConfig(content: string): Promise<{ status: string }>{
+  const r = await fetch(`${base}/api/broker/config`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content })
+  })
+  if (!r.ok) throw new Error('set broker config failed')
+  return r.json()
+}
+
+export async function brokerRestart() { await fetch(`${base}/api/broker/restart`, { method: 'POST' }) }
+export async function brokerStart() { await fetch(`${base}/api/broker/start`, { method: 'POST' }) }
+export async function brokerStop() { await fetch(`${base}/api/broker/stop`, { method: 'POST' }) }
+
+// Display APIs
+export async function listDisplayPorts(): Promise<{ ports: { device?: string|null; name: string }[] }>{
+  const r = await fetch(`${base}/api/display/ports`)
+  if (!r.ok) throw new Error('list ports failed')
+  return r.json()
+}
+
+export async function displayTest(payload: { text?: string; grams?: number }): Promise<{ status?: string; error?: string }>{
+  const r = await fetch(`${base}/api/display/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  return r.json()
+}
+
+// System update
+export async function systemUpdate(rebuild: boolean): Promise<{ status: string; action?: string; logs?: string; error?: string }>{
+  const r = await fetch(`${base}/api/system/update`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rebuild })
+  })
+  return r.json()
 }

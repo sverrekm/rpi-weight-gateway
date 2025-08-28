@@ -1,14 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { getReading, tare, zero } from '../lib/api'
+import { getReading, getConfig, tare, zero } from '../lib/api'
 
 type R = { grams: number; ts: string; stable: boolean }
 
 const IndexPage: React.FC = () => {
   const [reading, setReading] = useState<R | null>(null)
   const [status, setStatus] = useState<string>('connecting...')
+  const [maxCap, setMaxCap] = useState<number>(0)
   const wsRef = useRef<WebSocket | null>(null)
 
   useEffect(() => {
+    // Load configuration for max capacity
+    (async () => {
+      try {
+        const cfg = await getConfig()
+        setMaxCap(cfg.max_capacity_g || 0)
+      } catch {}
+    })()
+
     const wsUrl = (() => {
       const proto = location.protocol === 'https:' ? 'wss' : 'ws'
       return `${proto}://${location.host}/ws/weight`
@@ -37,10 +46,16 @@ const IndexPage: React.FC = () => {
 
   const grams = reading ? reading.grams.toFixed(2) : '---'
   const stable = reading?.stable
+  const overCap = !!reading && maxCap > 0 && reading.grams > maxCap
 
   return (
     <div>
       <h2>Live weight</h2>
+      {overCap && (
+        <div style={{ background: '#fee2e2', color: '#991b1b', padding: '8px 12px', border: '1px solid #fecaca', borderRadius: 6 }}>
+          Over capacity: {reading!.grams.toFixed(2)} g exceeds {maxCap} g
+        </div>
+      )}
       <div style={{ fontSize: 64, fontWeight: 800, letterSpacing: -1, margin: '24px 0' }}>
         {grams} g {stable ? '✅' : '...'}
       </div>
