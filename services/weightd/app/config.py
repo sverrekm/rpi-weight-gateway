@@ -1,36 +1,63 @@
 from __future__ import annotations
 import json
 import os
+import logging
 from pathlib import Path
 from typing import Any, Dict
 from .models import Config
 
+logger = logging.getLogger(__name__)
+
 DATA_DIR = Path(os.getenv("DATA_DIR", "/data"))
 CONFIG_PATH = DATA_DIR / "config.json"
 
+
+def getenv_int(name: str, default: int) -> int:
+    """Safely get an integer environment variable with fallback to default."""
+    value = os.getenv(name)
+    if not value or value.strip() == "":
+        return default
+    try:
+        return int(value.strip())
+    except ValueError:
+        logger.warning(f"Invalid integer value for {name}='{value}', using default {default}")
+        return default
+
+
+def getenv_float(name: str, default: float) -> float:
+    """Safely get a float environment variable with fallback to default."""
+    value = os.getenv(name)
+    if not value or value.strip() == "":
+        return default
+    try:
+        return float(value.strip())
+    except ValueError:
+        logger.warning(f"Invalid float value for {name}='{value}', using default {default}")
+        return default
+
 DEFAULT = Config(
     mqtt_host=os.getenv("MQTT_HOST") or None,
-    mqtt_port=int(os.getenv("MQTT_PORT", "1883")),
+    mqtt_port=getenv_int("MQTT_PORT", 1883),
     mqtt_user=os.getenv("MQTT_USER") or None,
     mqtt_pass=os.getenv("MQTT_PASS") or None,
     weight_topic=os.getenv("WEIGHT_TOPIC", "weight/measure"),
     status_topic=os.getenv("STATUS_TOPIC", "weight/status"),
     cmd_topic=os.getenv("CMD_TOPIC", "weight/cmd"),
-    gpio_dout=int(os.getenv("GPIO_DOUT", "5")),
-    gpio_sck=int(os.getenv("GPIO_SCK", "6")),
-    sample_rate=int(os.getenv("SAMPLE_RATE", "10")),
-    median_window=int(os.getenv("MEDIAN_WINDOW", "5")),
-    scale=float(os.getenv("SCALE", "1.0")),
-    offset=float(os.getenv("OFFSET", "0.0")),
+    gpio_dout=getenv_int("GPIO_DOUT", 5),
+    gpio_sck=getenv_int("GPIO_SCK", 6),
+    sample_rate=getenv_int("SAMPLE_RATE", 10),
+    median_window=getenv_int("MEDIAN_WINDOW", 5),
+    scale=getenv_float("SCALE", 1.0),
+    offset=getenv_float("OFFSET", 0.0),
     demo_mode=os.getenv("DEMO_MODE", "false").lower() == "true",
     # Display defaults
     display_enabled=os.getenv("DISPLAY_ENABLED", "false").lower() == "true",
     serial_port=os.getenv("SERIAL_PORT") or None,
-    baudrate=int(os.getenv("SERIAL_BAUD", "9600")),
-    databits=int(os.getenv("SERIAL_DATABITS", "7")),
+    baudrate=getenv_int("SERIAL_BAUD", 9600),
+    databits=getenv_int("SERIAL_DATABITS", 7),
     parity=os.getenv("SERIAL_PARITY", "E"),
-    stopbits=int(os.getenv("SERIAL_STOPBITS", "1")),
-    dp=int(os.getenv("DISPLAY_DP", "2")),
+    stopbits=getenv_int("SERIAL_STOPBITS", 1),
+    dp=getenv_int("DISPLAY_DP", 2),
     unit=os.getenv("DISPLAY_UNIT", "kg"),
     address=os.getenv("DISPLAY_ADDR") or None,
 )
