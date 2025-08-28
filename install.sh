@@ -88,11 +88,18 @@ EOF
 compose_up() {
   cd "$INSTALL_DIR"
   if [[ $REBUILD -eq 1 ]]; then
-    log "Building images..."
-    DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0 docker compose build
+    log "Building image (manual docker build to avoid BuildKit)..."
+    # Determine project image tag (default compose project name is directory name)
+    local IMAGE_TAG="rpi-weight-gateway-weightd:latest"
+    docker build -f services/weightd/Dockerfile -t "$IMAGE_TAG" . || {
+      log "Manual docker build failed"; exit 1; }
   fi
   log "Starting services..."
-  docker compose up -d "${WITH_PROFILES[@]}"
+  if [[ $REBUILD -eq 1 ]]; then
+    docker compose up -d --no-build "${WITH_PROFILES[@]}"
+  else
+    docker compose up -d "${WITH_PROFILES[@]}"
+  fi
 }
 
 main() {
