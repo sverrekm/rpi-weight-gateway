@@ -6,7 +6,7 @@ import socket
 from pathlib import Path
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
-from typing import List, Callable
+from typing import List, Callable, Optional, Dict, Any, Tuple
 
 from .models import Reading, CalibrateRequest, Config, Health, WiFiInfo
 
@@ -126,7 +126,7 @@ persistence_location /mosquitto/data/
     def _docker_available() -> bool:
         return os.path.exists("/var/run/docker.sock")
 
-    def _run_docker(args: list[str], extra_env: dict | None = None) -> tuple[int, str]:
+    def _run_docker(args: List[str], extra_env: Optional[Dict[str, Any]] = None) -> Tuple[int, str]:
         import subprocess
         try:
             env = None
@@ -168,7 +168,7 @@ persistence_location /mosquitto/data/
         return {"status": "ok"}
 
     @router.post("/api/system/update")
-    async def system_update(payload: dict | None = None):
+    async def system_update(payload: Optional[Dict[str, Any]] = None):
         """
         Update deployment using Docker:
         - docker compose pull (fetch newer images)
@@ -178,7 +178,7 @@ persistence_location /mosquitto/data/
         """
         if not _docker_available():
             return JSONResponse({"error": "docker socket not available in container"}, status_code=501)
-        logs: list[str] = []
+        logs: List[str] = []
         # Pull newer images (no-op if building locally)
         rc, out = _run_docker(["compose", "pull"])
         logs.append(out)
