@@ -204,7 +204,16 @@ async function saveConfig(e) {
   }
   $cfgStatus.textContent = 'Saving...';
   try {
-    const r = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    // Add timeout to avoid indefinite pending
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 10000);
+    const r = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    clearTimeout(t);
     if (!r.ok) throw new Error(await r.text());
     const saved = await r.json().catch(()=>null);
     if (saved) currentCfg = saved;
@@ -213,7 +222,11 @@ async function saveConfig(e) {
     $cfgStatus.textContent = 'Saved ✓ (applied)';
     setTimeout(()=> $cfgStatus.textContent = '', 2000);
   } catch (e) {
-    $cfgStatus.textContent = 'Error: ' + e.message;
+    if (e.name === 'AbortError') {
+      $cfgStatus.textContent = 'Error: timeout while saving';
+    } else {
+      $cfgStatus.textContent = 'Error: ' + e.message;
+    }
   }
 }
 

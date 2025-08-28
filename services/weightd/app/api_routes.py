@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from typing import List, Callable, Optional, Dict, Any, Tuple
 
 from .models import Reading, CalibrateRequest, Config, Health, WiFiInfo
+from .config import save_config as persist_config
 
 
 class WeightHub:
@@ -80,8 +81,23 @@ persistence_location /mosquitto/data/
 
     @router.post("/api/config", response_model=Config)
     async def set_config(new_cfg: Config):
-        ctx.update_config(new_cfg)
-        return ctx.cfg
+        """
+        Persist quickly and apply in background to avoid blocking the HTTP request
+        (GPIO/HX711/MQTT reconfiguration can be slow on some hardware).
+        """
+        try:
+            # Persist immediately so changes survive even if apply fails later
+            persist_config(new_cfg)
+        except Exception:
+            # Non-fatal: apply step below will also persist
+            pass
+        try:
+            # Apply in background thread so this handler returns immediately
+            asyncio.create_task(asyncio.to_thread(ctx.update_config, new_cfg))
+        except Exception:
+            # As a last resort, do it synchronously
+            ctx.update_config(new_cfg)
+        return new_cfg
 
     @router.get("/api/broker/status")
     async def broker_status():
