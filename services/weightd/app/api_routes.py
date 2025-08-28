@@ -184,6 +184,16 @@ persistence_location /mosquitto/data/
         logs.append(out)
         if rc != 0:
             return JSONResponse({"error": out.strip()}, status_code=500)
+        # Detect whether any image was actually updated
+        lower_out = out.lower()
+        updated = any(
+            kw in lower_out for kw in [
+                "downloaded newer image",
+                "downloaded",
+                "pulled new image",
+                "new image downloaded",
+            ]
+        )
         # Optional rebuild (manual docker build to avoid BuildKit and ensure correct base)
         rebuild = bool(payload.get("rebuild")) if isinstance(payload, dict) else False
         if rebuild:
@@ -206,13 +216,15 @@ persistence_location /mosquitto/data/
             logs.append(out)
             if rc != 0:
                 return JSONResponse({"error": out.strip()}, status_code=500)
-            return {"status": "ok", "logs": "\n".join(logs)[-4000:]}
-        # Apply (no rebuild)
-        rc, out = _run_docker(["compose", "up", "-d"])
+            return {"status": "ok", "action": "rebuilt", "logs": "\n".join(logs)[-4000:]}
+        # Apply (no rebuild): only if there were updates
+        if not updated:
+            return {"status": "ok", "action": "no_update", "logs": "\n".join(logs)[-4000:]}
+        rc, out = _run_docker(["compose", "up", "-d"])  # apply only when new images exist
         logs.append(out)
         if rc != 0:
             return JSONResponse({"error": out.strip()}, status_code=500)
-        return {"status": "ok", "logs": "\n".join(logs)[-4000:]}
+        return {"status": "ok", "action": "updated", "logs": "\n".join(logs)[-4000:]}
 
     @router.websocket("/ws/weight")
     async def ws_weight(websocket: WebSocket):
