@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RPI Weight Gateway</title>
+  <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%230b5"/><text x="50%" y="54%" font-size="34" text-anchor="middle" fill="white" font-family="Arial, Helvetica, sans-serif">W</text></svg>' />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -76,14 +77,14 @@
           </label>
           <label>GPIO SCK
             <input name="gpio_sck" type="number" />
-            <small class="hint">Pi2 Click Socket 1 → 11</small>
+            <small class="hint">Pi2 Click Socket 1 → 18</small>
           </label>
           <label style="width:100%">GPIO Presets
             <select id="gpioPresets">
               <option value="">Select preset…</option>
-              <option value='{"gpio_dout":6,"gpio_sck":11}'>Pi2 Click Socket 1 (DOUT 6, SCK 11)</option>
-              <option value='{"gpio_dout":26,"gpio_sck":11}'>Pi2 Click Socket 2 (DOUT 26, SCK 11)</option>
-              <option value='{"gpio_dout":6,"gpio_sck":11}'>Default (DOUT 6, SCK 11)</option>
+              <option value='{"gpio_dout":6,"gpio_sck":18}'>Pi2 Click Socket 1 (DOUT 6, SCK 18)</option>
+              <option value='{"gpio_dout":26,"gpio_sck":17}'>Pi2 Click Socket 2 (DOUT 26, SCK 17)</option>
+              <option value='{"gpio_dout":6,"gpio_sck":18}'>Default (DOUT 6, SCK 18)</option>
               <option value='{"gpio_dout":23,"gpio_sck":24}'>Alt A (DOUT 23, SCK 24)</option>
               <option value='{"gpio_dout":20,"gpio_sck":21}'>Alt B (DOUT 20, SCK 21)</option>
               <option value='{"gpio_dout":9,"gpio_sck":11}'>Alt C (DOUT 9, SCK 11)</option>
