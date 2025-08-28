@@ -15,8 +15,9 @@ curl -fsSL https://raw.githubusercontent.com/sverrekm/rpi-weight-gateway/main/in
 ```
 
 Flags:
-- `--with-mqtt` to enable internal Mosquitto
-- `--with-wifi` to enable captive portal (host mode, requires Wi‑Fi)
+- `--with-mqtt` enable internal Mosquitto
+- `--with-wifi` enable captive portal (host mode)
+- `--rebuild` build images locally (useful on Raspberry Pi)
 
 ## Quick start
 
@@ -34,6 +35,15 @@ docker compose --profile wifi up -d   # starts wifi-connect captive portal
 
 3) Open the UI:
 - http://<pi-ip>:8080
+
+## Update/Upgrade
+
+- From the UI: use the panel “System Update”
+  - Optional: tick “Rebuild locally” on Raspberry Pi
+  - Backend runs `docker compose pull` and optionally a manual `docker build` for `weightd`, then `up -d`
+- Or re-run installer:
+  - `curl -fsSL https://raw.githubusercontent.com/sverrekm/rpi-weight-gateway/main/install.sh | sudo bash`
+  - With local rebuild: add `--rebuild`
 
 ## Hardware and GPIO
 
@@ -65,6 +75,18 @@ WIFI_AP_SSID=WeightGateway-XXXX
 WIFI_AP_PASS=weight1234
 AP_COUNTRY=NO
 DEMO_MODE=false
+# Display / Serial (optional)
+DISPLAY_ENABLED=false
+SERIAL_PORT=/dev/ttyUSB0
+SERIAL_BAUD=9600
+SERIAL_DATABITS=8
+SERIAL_PARITY=N
+SERIAL_STOPBITS=1
+DISPLAY_DP=2
+DISPLAY_UNIT=g
+DISPLAY_ADDR=
+# Broker config path (inside weightd container)
+BROKER_CONF_PATH=/data/mosquitto.conf
 ```
 
 ## MQTT topics
@@ -82,20 +104,35 @@ DEMO_MODE=false
 - `POST /api/calibrate` body `{ known_grams: float }`
 - `GET /api/config` / `POST /api/config`
 - `WS /ws/weight` streaming readings
+- Display:
+  - `GET /api/display/ports` → list available serial ports
+  - `POST /api/display/test` body `{ text?: string, grams?: number }`
+- Broker:
+  - `GET /api/broker/config` → read mosquitto.conf
+  - `POST /api/broker/config` body `{ content: string }` → save mosquitto.conf
+  - `POST /api/broker/restart|start|stop`
+- System:
+  - `POST /api/system/update` body `{ rebuild?: boolean }`
 
 ## Compose profiles
 
 - `mqtt`: Eclipse Mosquitto on host network, config in `services/mqtt/mosquitto.conf`
 - `wifi`: balenablocks/wifi-connect, host mode, captive portal SSID from `.env`
 
-## Building images (on Pi)
+## Display (ND5052)
 
-```bash
-./install.sh --with-mqtt --with-wifi
-# or manually
-DOCKER_DEFAULT_PLATFORM=linux/arm/v7 docker compose build
-DOCKER_DEFAULT_PLATFORM=linux/arm/v7 docker compose up -d --profile mqtt --profile wifi
-```
+- Enable in UI under Configuration → Display (ND5052)
+- Select serial port (use “Scan” to populate a list)
+- Set baud/databits/parity/stopbits, decimal places (DP), unit, and optional address
+- Test output via the “Display” panel (send text or grams)
+
+## Building images (on Raspberry Pi)
+
+- Prefer the installer with `--rebuild` (performs a manual docker build with the correct base image for your arch):
+  - `./install.sh --rebuild`
+- If you must build manually:
+  - armv7l: `docker build --build-arg BASE_IMAGE=arm32v7/python:3.9-bullseye -f services/weightd/Dockerfile -t rpi-weight-gateway-weightd:latest . && docker compose up -d --no-build`
+  - aarch64: `docker build --build-arg BASE_IMAGE=python:3.9-bookworm -f services/weightd/Dockerfile -t rpi-weight-gateway-weightd:latest . && docker compose up -d --no-build`
 
 ## Troubleshooting
 
@@ -104,6 +141,7 @@ DOCKER_DEFAULT_PLATFORM=linux/arm/v7 docker compose up -d --profile mqtt --profi
 - GPIO errors: verify pins, run on actual Pi, and `privileged: true`
 - MQTT not connected: set `MQTT_HOST` or start internal broker via profile `mqtt`
 - Wi‑Fi portal: requires host networking and Wi‑Fi adapter; connect to the AP SSID and configure network
+- Rebuild hangs or BuildKit errors on Pi: use installer `--rebuild` or the manual build commands above; avoids BuildKit and selects a compatible Python base image for your architecture
 
 ## License
 

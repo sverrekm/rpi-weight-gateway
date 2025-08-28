@@ -30,6 +30,9 @@ RUN python -m pip install --upgrade pip setuptools wheel \
 # main.py expects STATIC_DIR relative to the "app" package directory
 COPY services/webui/dist /app/app/static
 
+# Copy project logo into static web root
+COPY static/IMG_4293.jpg /app/app/static/logo.jpg
+
 COPY services/weightd /app
 
 # Create data dir

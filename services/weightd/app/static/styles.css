@@ -9,6 +9,31 @@ body {
   line-height: 1.6;
 }
 
+/* Footer */
+footer {
+  max-width: 1200px;
+  margin: 0 auto 24px auto;
+  padding: 0 24px;
+}
+
+.footer-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: #4a5568;
+}
+
+.footer-logo {
+  height: 28px;
+  width: auto;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
 /* Header Styling */
 header { 
   display: flex; 
