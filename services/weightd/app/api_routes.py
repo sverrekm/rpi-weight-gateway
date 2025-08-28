@@ -126,10 +126,14 @@ persistence_location /mosquitto/data/
     def _docker_available() -> bool:
         return os.path.exists("/var/run/docker.sock")
 
-    def _run_docker(args: list[str]) -> tuple[int, str]:
+    def _run_docker(args: list[str], extra_env: dict | None = None) -> tuple[int, str]:
         import subprocess
         try:
-            proc = subprocess.run(["docker"] + args, capture_output=True, text=True, timeout=15)
+            env = None
+            if extra_env:
+                env = os.environ.copy()
+                env.update({k: str(v) for k, v in extra_env.items()})
+            proc = subprocess.run(["docker"] + args, capture_output=True, text=True, timeout=60, env=env)
             rc = proc.returncode
             out = (proc.stdout or "") + (proc.stderr or "")
             return rc, out
@@ -183,7 +187,7 @@ persistence_location /mosquitto/data/
         # Optional rebuild
         rebuild = bool(payload.get("rebuild")) if isinstance(payload, dict) else False
         if rebuild:
-            rc, out = _run_docker(["compose", "build"])
+            rc, out = _run_docker(["compose", "build"], extra_env={"DOCKER_BUILDKIT": "0", "COMPOSE_DOCKER_CLI_BUILD": "0"})
             logs.append(out)
             if rc != 0:
                 return JSONResponse({"error": out.strip()}, status_code=500)

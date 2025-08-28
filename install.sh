@@ -89,7 +89,7 @@ compose_up() {
   cd "$INSTALL_DIR"
   if [[ $REBUILD -eq 1 ]]; then
     log "Building images..."
-    docker compose build
+    DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0 docker compose build
   fi
   log "Starting services..."
   docker compose up -d "${WITH_PROFILES[@]}"
