@@ -91,7 +91,22 @@ compose_up() {
     log "Building image (manual docker build to avoid BuildKit)..."
     # Determine project image tag (default compose project name is directory name)
     local IMAGE_TAG="rpi-weight-gateway-weightd:latest"
-    docker build -f services/weightd/Dockerfile -t "$IMAGE_TAG" . || {
+    # Select base image per arch
+    local ARCH
+    ARCH=$(uname -m)
+    local BASE_IMAGE
+    case "$ARCH" in
+      armv7l)
+        BASE_IMAGE="arm32v7/python:3.9-bullseye" # bookworm often missing for armv7
+        ;;
+      aarch64)
+        BASE_IMAGE="python:3.9-bookworm"
+        ;;
+      *)
+        BASE_IMAGE="python:3.9-bookworm"
+        ;;
+    esac
+    docker build --build-arg BASE_IMAGE="$BASE_IMAGE" -f services/weightd/Dockerfile -t "$IMAGE_TAG" . || {
       log "Manual docker build failed"; exit 1; }
   fi
   log "Starting services..."

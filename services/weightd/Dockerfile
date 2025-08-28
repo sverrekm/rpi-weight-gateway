@@ -1,5 +1,7 @@
-# --- Stage 1: runtime (Raspberry Pi arm64 kernel / Python 3.9 Bookworm) ---
-FROM python:3.9-bookworm
+# --- Stage 1: runtime ---
+# Allow overriding base image for architecture compatibility (e.g., arm32v7/ or arm64v8/)
+ARG BASE_IMAGE=python:3.9-bookworm
+FROM ${BASE_IMAGE}
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \

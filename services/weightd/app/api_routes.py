@@ -184,14 +184,30 @@ persistence_location /mosquitto/data/
         logs.append(out)
         if rc != 0:
             return JSONResponse({"error": out.strip()}, status_code=500)
-        # Optional rebuild
+        # Optional rebuild (manual docker build to avoid BuildKit and ensure correct base)
         rebuild = bool(payload.get("rebuild")) if isinstance(payload, dict) else False
         if rebuild:
-            rc, out = _run_docker(["compose", "build"], extra_env={"DOCKER_BUILDKIT": "0", "COMPOSE_DOCKER_CLI_BUILD": "0"})
+            import platform
+            arch = platform.machine()
+            base = "python:3.9-bookworm"
+            if arch == "armv7l":
+                base = "arm32v7/python:3.9-bullseye"
+            # Build weightd image manually with BASE_IMAGE override
+            rc, out = _run_docker([
+                "build", "--build-arg", f"BASE_IMAGE={base}",
+                "-f", "services/weightd/Dockerfile",
+                "-t", "rpi-weight-gateway-weightd:latest", "."
+            ])
             logs.append(out)
             if rc != 0:
                 return JSONResponse({"error": out.strip()}, status_code=500)
-        # Apply
+            # Apply without building
+            rc, out = _run_docker(["compose", "up", "-d", "--no-build"])
+            logs.append(out)
+            if rc != 0:
+                return JSONResponse({"error": out.strip()}, status_code=500)
+            return {"status": "ok", "logs": "\n".join(logs)[-4000:]}
+        # Apply (no rebuild)
         rc, out = _run_docker(["compose", "up", "-d"])
         logs.append(out)
         if rc != 0:
