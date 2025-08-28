@@ -104,3 +104,56 @@ class HX711Reader:
         if count & 0x800000:
             count |= ~0xFFFFFF
         return float(count)
+
+    # --- Debug/raw helpers for selecting channel/gain ---
+    # HX711 modes: A128 (1 extra pulse), B32 (2 pulses), A64 (3 pulses)
+    _MODE_PULSES = {"A128": 1, "B32": 2, "A64": 3}
+
+    def _read_raw_with_next(self, next_pulses: int) -> int:
+        """Read current 24-bit value, then send next_pulses to set next mode.
+        Returns signed 24-bit integer.
+        """
+        if self.demo_mode or GPIO is None:
+            # Provide a deterministic-ish triad for demo
+            t = time.time() - self._t0
+            base = int(100000 + 5000 * math.sin(t / 2.0))
+            return base
+        # Wait data ready
+        timeout = time.time() + 0.1
+        while GPIO.input(self.dout) == 1:
+            if time.time() > timeout:
+                break
+        count = 0
+        for _ in range(24):
+            GPIO.output(self.sck, True)
+            count = (count << 1) | GPIO.input(self.dout)
+            GPIO.output(self.sck, False)
+        # set mode for next conversion
+        for _ in range(max(1, min(3, int(next_pulses)))):
+            GPIO.output(self.sck, True)
+            GPIO.output(self.sck, False)
+        # sign extend
+        if count & 0x800000:
+            count |= ~0xFFFFFF
+        return int(count)
+
+    def read_raw_mode(self, mode: str) -> int:
+        """Return signed 24-bit raw value for the requested mode ('A128','B32','A64').
+        Performs a priming read to switch into the requested mode, then a second
+        read to fetch a sample from that mode.
+        """
+        mode = mode.upper()
+        pulses = self._MODE_PULSES.get(mode, 1)
+        # prime into requested mode (discard value)
+        _ = self._read_raw_with_next(pulses)
+        # now read a value while keeping same mode selected for next
+        val = self._read_raw_with_next(pulses)
+        return val
+
+    def read_raw_all_modes(self) -> dict:
+        """Read raw values for B32, A64, and A128 sequentially and return a dict."""
+        return {
+            "B32": self.read_raw_mode("B32"),
+            "A64": self.read_raw_mode("A64"),
+            "A128": self.read_raw_mode("A128"),
+        }

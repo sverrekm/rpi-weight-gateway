@@ -42,6 +42,29 @@
       </div>
     </section>
 
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Debug Raw</h2>
+        <span class="muted">HX711 raw 24-bit counts per mode</span>
+      </div>
+      <div class="grid">
+        <label style="grid-column:1/-1">
+          <input type="checkbox" id="debugEnable" /> Enable polling (500 ms)
+        </label>
+        <label>Channel A (128 Gain)
+          <input id="rawA128" readonly />
+        </label>
+        <label>Channel B (32 Gain)
+          <input id="rawB32" readonly />
+        </label>
+        <label>Channel A (64 Gain)
+          <input id="rawA64" readonly />
+        </label>
+        <div style="grid-column:1/-1" class="muted">Values are signed 24-bit (min -0x800000, max 0x7FFFFF).
+        </div>
+      </div>
+    </section>
+
   <section class="panel">
     <div class="panel-head">
       <h2>Display</h2>

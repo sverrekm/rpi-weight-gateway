@@ -16,6 +16,11 @@ const $cfgStatus = qs('#cfgStatus');
 const $ws = qs('#ws');
 const $lastTs = qs('#lastTs');
 const $gpioPresets = qs('#gpioPresets');
+// Debug raw UI elements
+const $debugEnable = qs('#debugEnable');
+const $rawA128 = qs('#rawA128');
+const $rawB32 = qs('#rawB32');
+const $rawA64 = qs('#rawA64');
 // Display UI elements
 const $dispText = qs('#dispText');
 const $dispGrams = qs('#dispGrams');
@@ -41,6 +46,7 @@ const $updateLogs = qs('#updateLogs');
 let currentCfg = {};
 let wsConnected = false;
 let pollTimer = null;
+let debugTimer = null;
 
 function fmtUptime(s) {
   const d = Math.floor(s / 86400);
@@ -138,6 +144,13 @@ async function loadHealth() {
       if ($updateMsg) $updateMsg.textContent = 'Error: ' + e.message;
     }
   });
+
+  // Debug toggle
+  if ($debugEnable) {
+    $debugEnable.addEventListener('change', () => {
+      if ($debugEnable.checked) startDebugPolling(); else stopDebugPolling();
+    });
+  }
 }
 
 async function loadSerialPorts(currentValue) {
@@ -278,6 +291,32 @@ function stopPolling() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
 }
 
+async function fetchRawDebugOnce() {
+  try {
+    const r = await fetch('/api/debug/raw');
+    if (!r.ok) throw new Error('debug read failed');
+    const j = await r.json();
+    const d = (j && j.data) ? j.data : {};
+    if ($rawA128) $rawA128.value = (d.A128 !== undefined ? d.A128 : '');
+    if ($rawB32) $rawB32.value = (d.B32 !== undefined ? d.B32 : '');
+    if ($rawA64) $rawA64.value = (d.A64 !== undefined ? d.A64 : '');
+  } catch (_) {
+    if ($rawA128) $rawA128.value = '';
+    if ($rawB32) $rawB32.value = '';
+    if ($rawA64) $rawA64.value = '';
+  }
+}
+
+function startDebugPolling() {
+  if (debugTimer) return;
+  debugTimer = setInterval(fetchRawDebugOnce, 500);
+  fetchRawDebugOnce();
+}
+
+function stopDebugPolling() {
+  if (debugTimer) { clearInterval(debugTimer); debugTimer = null; }
+}
+
 function connectWS() {
   let proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}/ws/weight`);
@@ -359,6 +398,8 @@ async function init() {
   // kick off polling as immediate fallback until WS connects
   startPolling();
   setInterval(loadHealth, 5000);
+  // honor persisted toggle state (default unchecked)
+  if ($debugEnable && $debugEnable.checked) startDebugPolling();
 }
 
 document.addEventListener('DOMContentLoaded', init);

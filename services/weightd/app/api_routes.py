@@ -75,6 +75,15 @@ persistence_location /mosquitto/data/
         ctx.save_config()
         return {"status": "ok", "scale": scale}
 
+    @router.get("/api/debug/raw")
+    async def debug_raw():
+        try:
+            vals = ctx.reader.read_raw_all_modes()
+            # ensure plain JSON serializable
+            return {"status": "ok", "data": {k: int(v) for k, v in vals.items()}}
+        except Exception as e:
+            return JSONResponse({"status": "error", "error": str(e)}, status_code=500)
+
     @router.get("/api/config", response_model=Config)
     async def get_config():
         return ctx.cfg
