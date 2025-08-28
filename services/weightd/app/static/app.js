@@ -33,6 +33,11 @@ const $btnBrokerSave = qs('#btnBrokerSave');
 const $btnBrokerRestart = qs('#btnBrokerRestart');
 const $btnBrokerStart = qs('#btnBrokerStart');
 const $btnBrokerStop = qs('#btnBrokerStop');
+// System update UI elements
+const $btnUpdate = qs('#btnUpdate');
+const $chkRebuild = qs('#chkRebuild');
+const $updateMsg = qs('#updateMsg');
+const $updateLogs = qs('#updateLogs');
 let currentCfg = {};
 let wsConnected = false;
 let pollTimer = null;
@@ -116,6 +121,22 @@ async function loadHealth() {
   // Scan serial ports
   if ($btnScanPorts) $btnScanPorts.addEventListener('click', async ()=>{
     await loadSerialPorts(currentCfg.serial_port || '');
+  });
+  // System Update
+  if ($btnUpdate) $btnUpdate.addEventListener('click', async ()=>{
+    if ($updateMsg) $updateMsg.textContent = 'Updating...';
+    if ($updateLogs) $updateLogs.textContent = '';
+    try {
+      const body = { rebuild: !!($chkRebuild && $chkRebuild.checked) };
+      const r = await fetch('/api/system/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(typeof j === 'string' ? j : (j.error || 'update failed'));
+      if ($updateMsg) $updateMsg.textContent = 'Updated ✓';
+      if ($updateLogs) $updateLogs.textContent = j.logs || '';
+      setTimeout(()=> { if ($updateMsg) $updateMsg.textContent=''; }, 2500);
+    } catch(e) {
+      if ($updateMsg) $updateMsg.textContent = 'Error: ' + e.message;
+    }
   });
 }
 
@@ -317,6 +338,8 @@ function bindActions() {
 async function init() {
   await loadHealth();
   await loadConfig();
+  // Also load broker status and configuration on first load so the textarea is populated after refresh
+  await loadBroker();
   bindActions();
   setUiConnected(false);
   connectWS();

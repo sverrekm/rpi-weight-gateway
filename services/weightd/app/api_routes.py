@@ -163,6 +163,37 @@ persistence_location /mosquitto/data/
             return JSONResponse({"error": out.strip()}, status_code=500)
         return {"status": "ok"}
 
+    @router.post("/api/system/update")
+    async def system_update(payload: dict | None = None):
+        """
+        Update deployment using Docker:
+        - docker compose pull (fetch newer images)
+        - optionally docker compose build if payload.rebuild is true (for local source changes)
+        - docker compose up -d (apply)
+        Returns combined log output.
+        """
+        if not _docker_available():
+            return JSONResponse({"error": "docker socket not available in container"}, status_code=501)
+        logs: list[str] = []
+        # Pull newer images (no-op if building locally)
+        rc, out = _run_docker(["compose", "pull"])
+        logs.append(out)
+        if rc != 0:
+            return JSONResponse({"error": out.strip()}, status_code=500)
+        # Optional rebuild
+        rebuild = bool(payload.get("rebuild")) if isinstance(payload, dict) else False
+        if rebuild:
+            rc, out = _run_docker(["compose", "build"])
+            logs.append(out)
+            if rc != 0:
+                return JSONResponse({"error": out.strip()}, status_code=500)
+        # Apply
+        rc, out = _run_docker(["compose", "up", "-d"])
+        logs.append(out)
+        if rc != 0:
+            return JSONResponse({"error": out.strip()}, status_code=500)
+        return {"status": "ok", "logs": "\n".join(logs)[-4000:]}
+
     @router.websocket("/ws/weight")
     async def ws_weight(websocket: WebSocket):
         await hub.connect(websocket)
