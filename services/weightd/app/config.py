@@ -43,9 +43,8 @@ DEFAULT = Config(
     weight_topic=os.getenv("WEIGHT_TOPIC", "weight/measure"),
     status_topic=os.getenv("STATUS_TOPIC", "weight/status"),
     cmd_topic=os.getenv("CMD_TOPIC", "weight/cmd"),
-    gpio_dout=getenv_int("GPIO_DOUT", 6),
-    # HX711 CLK is on mikroBUS PWM; Pi2 Click Socket 1 maps PWM -> GPIO18
-    gpio_sck=getenv_int("GPIO_SCK", 18),
+    gpio_dout=int(os.getenv('GPIO_DOUT', '17')),
+    gpio_sck=int(os.getenv('GPIO_SCK', '11')),
     sample_rate=getenv_int("SAMPLE_RATE", 10),
     median_window=getenv_int("MEDIAN_WINDOW", 5),
     scale=getenv_float("SCALE", 1.0),
