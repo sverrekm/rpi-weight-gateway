@@ -42,6 +42,13 @@ const $btnBrokerStart = qs('#btnBrokerStart');
 const $btnBrokerStop = qs('#btnBrokerStop');
 // System update UI elements
 const $btnUpdate = qs('#btnUpdate');
+// WiFi UI elements
+const $wifiStatus = qs('#wifiStatus');
+const $wifiNetworks = qs('#wifiNetworks');
+const $wifiPassword = qs('#wifiPassword');
+const $btnWifiScan = qs('#btnWifiScan');
+const $btnWifiConnect = qs('#btnWifiConnect');
+const $wifiMsg = qs('#wifiMsg');
 const $chkRebuild = qs('#chkRebuild');
 const $updateMsg = qs('#updateMsg');
 const $updateLogs = qs('#updateLogs');
@@ -92,21 +99,64 @@ async function loadBroker() {
 
 async function loadHealth() {
   try {
-    const r = await fetch('/api/health');
-    const j = await r.json();
-    $uptime.textContent = `Uptime: ${fmtUptime(j.uptime_s)}`;
-    $wifi.textContent = `WiFi: ${j.wifi.connected ? 'connected' : 'disconnected'}${j.wifi.ssid ? ' ('+j.wifi.ssid+')' : ''} ${j.wifi.ip ? j.wifi.ip : ''}`;
-    $mqtt.textContent = `MQTT: ${j.mqtt}`;
-    $version.textContent = `v${j.version}`;
+    const resp = await get('/api/health');
+    $uptime.textContent = `Uptime: ${fmtUptime(resp.uptime)}`;
+    $wifi.textContent = `WiFi: ${resp.wifi_ssid || 'disconnected'}`;
+    $mqtt.textContent = `MQTT: ${resp.mqtt_connected ? 'connected' : 'disconnected'}`;
+    $version.textContent = `v${resp.version}`;
   } catch (e) {
-    $uptime.textContent = 'Uptime: -';
+    console.error('Health check failed:', e);
   }
-  // Broker bindings
+}
+
+async function loadWifiStatus() {
+  try {
+    const resp = await get('/api/wifi/status');
+    if ($wifiStatus) {
+      $wifiStatus.textContent = resp.connected 
+        ? `WiFi: ${resp.ssid} (${resp.ip})` 
+        : 'WiFi: disconnected';
+    }
+  } catch (e) {
+    if ($wifiStatus) $wifiStatus.textContent = 'WiFi: error';
+    console.error('WiFi status failed:', e);
+  }
+}
+
+async function get(path) {
+  const r = await fetch(path);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function bindActions() {
+  if ($cfgForm) $cfgForm.addEventListener('submit', saveConfig);
+  if ($btnTare) $btnTare.addEventListener('click', async ()=>{ await post('/api/tare'); });
+  if ($btnZero) $btnZero.addEventListener('click', async ()=>{ await post('/api/zero'); });
+  if ($btnCal) $btnCal.addEventListener('click', async ()=>{
+    const g = parseFloat($known.value);
+    if (!isFinite(g) || g <= 0) { $calibStatus.textContent = 'Enter a positive weight'; return; }
+    $calibStatus.textContent = 'Calibrating...';
+    try { await post('/api/calibrate', { known_grams: g }); $calibStatus.textContent = 'Calibrated ✓'; setTimeout(()=> $calibStatus.textContent='', 1500); }
+    catch(e){ $calibStatus.textContent = 'Error: ' + e.message; }
+  });
+  if ($gpioPresets) $gpioPresets.addEventListener('change', ()=>{
+    const val = $gpioPresets.value;
+    if (!val) return;
+    try {
+      const preset = JSON.parse(val);
+      for (const [k, v] of Object.entries(preset)) {
+        const el = $cfgForm.elements.namedItem(k);
+        if (el) el.value = v;
+      }
+    } catch {}
+  });
+  // Broker actions
   if ($btnBrokerSave) $btnBrokerSave.addEventListener('click', async ()=>{
     if (!$brokerConf) return;
     $brokerMsg.textContent = 'Saving...';
-    try {
-      await post('/api/broker/config', { content: $brokerConf.value });
+    try { 
+      await post('/api/broker/config', { content: $brokerConf.value }); 
       $brokerMsg.textContent = 'Saved ✓';
       setTimeout(()=> $brokerMsg.textContent='', 1500);
     } catch(e){ $brokerMsg.textContent = 'Error: '+e.message; }
@@ -387,6 +437,41 @@ function bindActions() {
     try { await post('/api/display/test', { grams: val }); $dispMsg.textContent = 'Sent ✓'; setTimeout(()=> $dispMsg.textContent='', 1500); }
     catch(e){ $dispMsg.textContent = 'Error: ' + e.message; }
   });
+
+  // WiFi actions
+  if ($btnWifiScan) $btnWifiScan.addEventListener('click', async () => {
+    $wifiMsg.textContent = 'Scanning...';
+    try {
+      const resp = await get('/api/wifi/scan');
+      $wifiNetworks.innerHTML = '<option value="">Select network...</option>';
+      resp.networks.forEach(net => {
+        const option = document.createElement('option');
+        option.value = net.ssid;
+        option.textContent = `${net.ssid} (${net.signal}% ${net.security})`;
+        $wifiNetworks.appendChild(option);
+      });
+      $wifiMsg.textContent = `Found ${resp.networks.length} networks`;
+      setTimeout(() => $wifiMsg.textContent = '', 3000);
+    } catch(e) {
+      $wifiMsg.textContent = 'Scan failed: ' + e.message;
+    }
+  });
+
+  if ($btnWifiConnect) $btnWifiConnect.addEventListener('click', async () => {
+    const ssid = $wifiNetworks.value;
+    const psk = $wifiPassword.value;
+    if (!ssid) { $wifiMsg.textContent = 'Select a network'; return; }
+    
+    $wifiMsg.textContent = 'Connecting...';
+    try {
+      await post('/api/wifi/connect', { ssid, psk });
+      $wifiMsg.textContent = 'Connected ✓';
+      $wifiPassword.value = '';
+      setTimeout(() => { $wifiMsg.textContent = ''; loadWifiStatus(); }, 2000);
+    } catch(e) {
+      $wifiMsg.textContent = 'Connection failed: ' + e.message;
+    }
+  });
 }
 
 // Navigation functionality
@@ -433,6 +518,7 @@ async function init() {
   await loadConfig();
   // Also load broker status and configuration on first load so the textarea is populated after refresh
   await loadBroker();
+  await loadWifiStatus();
   bindActions();
   bindNavigation();
   setUiConnected(false);
@@ -440,6 +526,7 @@ async function init() {
   // kick off polling as immediate fallback until WS connects
   startPolling();
   setInterval(loadHealth, 5000);
+  setInterval(loadWifiStatus, 10000);
   // honor persisted toggle state (default unchecked)
   if ($debugEnable && $debugEnable.checked) startDebugPolling();
   

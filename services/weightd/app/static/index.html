@@ -226,6 +226,32 @@
       </div>
       <pre id="updateLogs" style="max-height:220px;overflow:auto;background:#111;color:#ddd;padding:8px;border-radius:4px"></pre>
     </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>WiFi</h2>
+        <span class="muted">Manage wireless connection</span>
+      </div>
+      <div class="grid">
+        <div style="grid-column:1/-1">
+          <div class="chip" id="wifiStatus">WiFi: unknown</div>
+        </div>
+        <label style="grid-column:1/-1">Available Networks
+          <select id="wifiNetworks" style="width:100%">
+            <option value="">Select network...</option>
+          </select>
+        </label>
+        <label style="grid-column:1/-1">Password
+          <input id="wifiPassword" type="password" placeholder="Enter password" autocomplete="new-password" />
+        </label>
+      </div>
+      <div class="actions">
+        <button id="btnWifiScan" type="button">Scan Networks</button>
+        <button id="btnWifiConnect" class="primary" type="button">Connect</button>
+        <span id="wifiMsg"></span>
+      </div>
+      <p class="hint">Scan for available networks, select one, enter password if required, and connect. Current connection status shown above.</p>
+    </section>
   </main>
 
   <footer>
