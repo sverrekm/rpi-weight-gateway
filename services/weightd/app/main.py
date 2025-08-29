@@ -225,25 +225,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static files (built webui) - mount BEFORE API routes
+# Static files - mount BEFORE API routes
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 print(f"[DEBUG] STATIC_DIR: {STATIC_DIR}, exists: {os.path.isdir(STATIC_DIR)}")
 if os.path.isdir(STATIC_DIR):
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-    print(f"[DEBUG] Mounted static files at /static")
-    # If Vite-style hashed assets exist under 'assets/', expose them at '/assets'
-    ASSETS_DIR = os.path.join(STATIC_DIR, "assets")
-    if os.path.isdir(ASSETS_DIR):
-        app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
-        print(f"[DEBUG] Mounted assets at /assets")
-    
-    # Serve index.html at root for SPA
+    # Mount static files at root for vanilla JS UI (styles.css, app.js, etc.)
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+    print(f"[DEBUG] Mounted static files at /")
+else:
+    # Fallback if static directory doesn't exist
     @app.get("/")
-    async def serve_index():
-        index_path = os.path.join(STATIC_DIR, "index.html")
-        if os.path.exists(index_path):
-            return FileResponse(index_path)
-        return {"message": "Frontend not found"}
+    async def serve_fallback():
+        return {"message": "Static files not found", "static_dir": STATIC_DIR}
 
 # API routes
 app.include_router(api_routes.create_router(ctx))
