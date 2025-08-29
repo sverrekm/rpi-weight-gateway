@@ -13,6 +13,10 @@
       <h1>RPI Weight Gateway</h1>
       <span class="badge" id="version">v-</span>
     </div>
+    <div class="nav-buttons">
+      <button class="nav-btn active" id="btnNavMain">Main</button>
+      <button class="nav-btn" id="btnNavConfig">Configuration</button>
+    </div>
     <div class="statusbar">
       <span class="chip" id="uptime">Uptime: -</span>
       <span class="chip" id="wifi">WiFi: -</span>
@@ -21,7 +25,7 @@
     </div>
   </header>
 
-  <main>
+  <main id="mainView">
     <section class="panel">
       <div class="panel-head">
         <h2>Live Reading</h2>
@@ -85,7 +89,9 @@
     </div>
     <p class="hint">Ensure Display is enabled and serial parameters are correct, then use Test to verify output.</p>
   </section>
+  </main>
 
+  <main id="configView" style="display: none;">
     <section class="panel">
       <div class="panel-head">
         <h2>Configuration</h2>
@@ -134,7 +140,7 @@
               <label>MQTT Host <input name="mqtt_host" /></label>
               <label>MQTT Port <input name="mqtt_port" type="number" min="1" max="65535" /></label>
               <label>MQTT User <input name="mqtt_user" /></label>
-              <label>MQTT Pass <input name="mqtt_pass" type="password" /></label>
+              <label>MQTT Pass <input name="mqtt_pass" type="password" autocomplete="current-password" /></label>
               <label>Weight Topic <input name="weight_topic" /></label>
               <label>Status Topic <input name="status_topic" /></label>
               <label>Cmd Topic <input name="cmd_topic" /></label>
@@ -177,7 +183,7 @@
           <span id="cfgStatus"></span>
         </div>
       </form>
-      <p class="hint">If you don’t see readings: turn on Demo mode to validate UI, then try the Pi2 Click preset for your socket.</p>
+      <p class="hint">If you don't see readings: turn on Demo mode to validate UI, then try the Pi2 Click preset for your socket.</p>
     </section>
   </main>
 

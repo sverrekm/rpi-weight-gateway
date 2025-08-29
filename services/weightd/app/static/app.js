@@ -387,12 +387,45 @@ function bindActions() {
   });
 }
 
+// Navigation functionality
+function showView(viewId) {
+  const views = ['mainView', 'configView'];
+  views.forEach(id => {
+    const view = document.getElementById(id);
+    if (view) view.style.display = id === viewId ? 'block' : 'none';
+  });
+  
+  // Update nav button states
+  const navBtns = document.querySelectorAll('.nav-btn');
+  navBtns.forEach(btn => btn.classList.remove('active'));
+  
+  if (viewId === 'mainView') {
+    document.getElementById('btnNavMain')?.classList.add('active');
+  } else if (viewId === 'configView') {
+    document.getElementById('btnNavConfig')?.classList.add('active');
+  }
+}
+
+function bindNavigation() {
+  const btnNavMain = document.getElementById('btnNavMain');
+  const btnNavConfig = document.getElementById('btnNavConfig');
+  
+  if (btnNavMain) {
+    btnNavMain.addEventListener('click', () => showView('mainView'));
+  }
+  
+  if (btnNavConfig) {
+    btnNavConfig.addEventListener('click', () => showView('configView'));
+  }
+}
+
 async function init() {
   await loadHealth();
   await loadConfig();
   // Also load broker status and configuration on first load so the textarea is populated after refresh
   await loadBroker();
   bindActions();
+  bindNavigation();
   setUiConnected(false);
   connectWS();
   // kick off polling as immediate fallback until WS connects
@@ -400,6 +433,9 @@ async function init() {
   setInterval(loadHealth, 5000);
   // honor persisted toggle state (default unchecked)
   if ($debugEnable && $debugEnable.checked) startDebugPolling();
+  
+  // Show main view by default
+  showView('mainView');
 }
 
 document.addEventListener('DOMContentLoaded', init);
