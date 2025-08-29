@@ -158,7 +158,18 @@ persistence_location /mosquitto/data/
             if extra_env:
                 env = os.environ.copy()
                 env.update({k: str(v) for k, v in extra_env.items()})
-            proc = subprocess.run(["docker"] + args, capture_output=True, text=True, timeout=60, env=env, cwd="/app/..")
+            # Try docker compose first, fallback to docker-compose
+            if args[0] == "compose":
+                try:
+                    proc = subprocess.run(["docker"] + args, capture_output=True, text=True, timeout=60, env=env, cwd="/app/..")
+                    if proc.returncode != 0 and "unknown command" in (proc.stderr or "").lower():
+                        # Fallback to docker-compose binary
+                        proc = subprocess.run(["docker-compose"] + args[1:], capture_output=True, text=True, timeout=60, env=env, cwd="/app/..")
+                except FileNotFoundError:
+                    # Try docker-compose binary directly
+                    proc = subprocess.run(["docker-compose"] + args[1:], capture_output=True, text=True, timeout=60, env=env, cwd="/app/..")
+            else:
+                proc = subprocess.run(["docker"] + args, capture_output=True, text=True, timeout=60, env=env, cwd="/app/..")
             rc = proc.returncode
             out = (proc.stdout or "") + (proc.stderr or "")
             return rc, out
