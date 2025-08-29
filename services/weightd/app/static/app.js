@@ -59,12 +59,13 @@ let pollTimer = null;
 let debugTimer = null;
 
 function fmtUptime(s) {
+  if (!s || !isFinite(s) || s < 0) return '0d 0h 0m 0s';
   const d = Math.floor(s / 86400);
   s %= 86400;
   const h = Math.floor(s / 3600);
   s %= 3600;
   const m = Math.floor(s / 60);
-  s %= 60;
+  s = Math.floor(s % 60);
   return `${d}d ${h}h ${m}m ${s}s`;
 }
 
@@ -101,12 +102,17 @@ async function loadBroker() {
 async function loadHealth() {
   try {
     const resp = await get('/api/health');
-    $uptime.textContent = `Uptime: ${fmtUptime(resp.uptime)}`;
-    $wifi.textContent = `WiFi: ${resp.wifi_ssid || 'disconnected'}`;
-    $mqtt.textContent = `MQTT: ${resp.mqtt_connected ? 'connected' : 'disconnected'}`;
-    $version.textContent = `v${resp.version}`;
+    if ($uptime) $uptime.textContent = `Uptime: ${fmtUptime(resp.uptime)}`;
+    if ($wifi) $wifi.textContent = `WiFi: ${resp.wifi_ssid || 'disconnected'}`;
+    if ($mqtt) $mqtt.textContent = `MQTT: ${resp.mqtt_connected ? 'connected' : 'disconnected'}`;
+    if ($version) $version.textContent = `v${resp.version}`;
   } catch (e) {
     console.error('Health check failed:', e);
+    // Set fallback values on error
+    if ($uptime) $uptime.textContent = 'Uptime: --';
+    if ($wifi) $wifi.textContent = 'WiFi: error';
+    if ($mqtt) $mqtt.textContent = 'MQTT: error';
+    if ($version) $version.textContent = 'v--';
   }
 }
 
@@ -187,14 +193,33 @@ function bindActions() {
     if ($updateLogs) $updateLogs.textContent = '';
     try {
       const body = { rebuild: !!($chkRebuild && $chkRebuild.checked) };
-      const r = await fetch('/api/system/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const r = await fetch('/api/system/update', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(body),
+        timeout: 60000  // 60 second timeout
+      });
+      
+      if (!r.ok) {
+        const errorText = await r.text();
+        throw new Error(`HTTP ${r.status}: ${errorText}`);
+      }
+      
       const j = await r.json();
-      if (!r.ok) throw new Error(typeof j === 'string' ? j : (j.error || 'update failed'));
-      if ($updateMsg) $updateMsg.textContent = 'Updated ✓';
+      if ($updateMsg) {
+        if (j.action === 'no_update') {
+          $updateMsg.textContent = 'No updates available';
+        } else if (j.action === 'rebuilt') {
+          $updateMsg.textContent = 'Rebuilt successfully ✓';
+        } else {
+          $updateMsg.textContent = 'Updated ✓';
+        }
+      }
       if ($updateLogs) $updateLogs.textContent = j.logs || '';
-      setTimeout(()=> { if ($updateMsg) $updateMsg.textContent=''; }, 2500);
+      setTimeout(()=> { if ($updateMsg) $updateMsg.textContent=''; }, 3000);
     } catch(e) {
       if ($updateMsg) $updateMsg.textContent = 'Error: ' + e.message;
+      console.error('Update failed:', e);
     }
   });
 

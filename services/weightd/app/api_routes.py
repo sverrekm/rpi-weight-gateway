@@ -53,7 +53,12 @@ persistence_location /mosquitto/data/
     @router.get("/api/health", response_model=Health)
     async def health():
         info = ctx.health_info()
-        return JSONResponse(info.dict())
+        # Convert to dict and flatten wifi info for easier frontend access
+        data = info.dict()
+        data['uptime'] = data.get('uptime_s', 0)
+        data['wifi_ssid'] = data.get('wifi', {}).get('ssid')
+        data['mqtt_connected'] = data.get('mqtt') == 'connected'
+        return JSONResponse(data)
 
     @router.get("/api/reading", response_model=Reading)
     async def get_reading():
@@ -150,7 +155,16 @@ persistence_location /mosquitto/data/
             return JSONResponse({"error": str(e)}, status_code=500)
 
     def _docker_available() -> bool:
-        return os.path.exists("/var/run/docker.sock")
+        # Check if docker socket exists and is accessible
+        if not os.path.exists("/var/run/docker.sock"):
+            return False
+        try:
+            # Try to access the socket
+            import stat
+            st = os.stat("/var/run/docker.sock")
+            return stat.S_ISSOCK(st.st_mode)
+        except:
+            return False
 
     def _run_docker(args: List[str], extra_env: Optional[Dict[str, Any]] = None) -> Tuple[int, str]:
         import subprocess
@@ -213,9 +227,30 @@ persistence_location /mosquitto/data/
         - docker compose up -d (apply)
         Returns combined log output.
         """
-        if not _docker_available():
-            return JSONResponse({"error": "docker socket not available in container"}, status_code=501)
+        # Check if docker socket is available
+        docker_available = _docker_available()
         logs: List[str] = []
+        
+        if not docker_available:
+            # Try alternative approach - restart container from inside
+            logs.append("Docker socket not available, attempting container restart...")
+            try:
+                import subprocess
+                # Try to restart the service using systemctl if available
+                result = subprocess.run(["systemctl", "restart", "docker"], 
+                                      capture_output=True, text=True, timeout=10)
+                if result.returncode == 0:
+                    logs.append("Service restart attempted")
+                    return {"status": "ok", "action": "restart_attempted", "logs": "\n".join(logs)}
+                else:
+                    logs.append(f"Restart failed: {result.stderr}")
+            except Exception as e:
+                logs.append(f"Restart attempt failed: {str(e)}")
+            
+            return JSONResponse({
+                "error": "Docker socket not available and restart failed", 
+                "logs": "\n".join(logs)
+            }, status_code=501)
         # Pull newer images (no-op if building locally)
         rc, out = _run_docker(["compose", "pull"])
         logs.append(out)
@@ -318,6 +353,13 @@ persistence_location /mosquitto/data/
         nets = []
         try:
             if shutil.which("nmcli"):
+                # First trigger a fresh scan
+                try:
+                    subprocess.run(["nmcli", "dev", "wifi", "rescan"], timeout=10, capture_output=True)
+                except Exception:
+                    pass  # Continue even if rescan fails
+                
+                # Get scan results
                 out = subprocess.check_output(["nmcli", "-t", "-f", "ssid,signal,security", "dev", "wifi"], text=True, timeout=8)
                 seen = set()
                 for line in out.splitlines():
@@ -325,7 +367,7 @@ persistence_location /mosquitto/data/
                         continue
                     parts = line.split(":")
                     ssid = parts[0]
-                    if ssid in seen:
+                    if not ssid or ssid in seen:
                         continue
                     seen.add(ssid)
                     sig = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else None
@@ -333,23 +375,34 @@ persistence_location /mosquitto/data/
                     nets.append({"ssid": ssid, "signal": sig, "security": sec})
             else:
                 # Fallback minimal scan via "iwlist" if available
-                if shutil.which("iwlist") and shutil.which("iwgetid"):
-                    # Determine interface via iwgetid -r fails? then default wlan0
+                if shutil.which("iwlist"):
+                    # Try to determine interface
+                    iface = "wlan0"
                     try:
-                        iface = subprocess.check_output(["iwgetid", "-r"] , text=True, timeout=3)
-                        iface = (iface or "").strip() or "wlan0"
+                        # Get interface from ip link or iwconfig
+                        result = subprocess.check_output(["ip", "link", "show"], text=True, timeout=3)
+                        for line in result.splitlines():
+                            if "wlan" in line and "state UP" in line:
+                                iface = line.split(":")[1].strip().split("@")[0]
+                                break
                     except Exception:
-                        iface = "wlan0"
-                    out = subprocess.check_output(["iwlist", iface, "scan"], text=True, timeout=12, stderr=subprocess.STDOUT)
-                    cur_ssid = None
-                    for line in out.splitlines():
-                        line = line.strip()
-                        if line.startswith("ESSID:"):
-                            cur_ssid = line.split(":",1)[1].strip().strip('"')
-                            nets.append({"ssid": cur_ssid})
-                # else: leave empty
-        except Exception:
-            pass
+                        pass
+                    
+                    try:
+                        out = subprocess.check_output(["iwlist", iface, "scan"], text=True, timeout=12, stderr=subprocess.STDOUT)
+                        cur_ssid = None
+                        for line in out.splitlines():
+                            line = line.strip()
+                            if line.startswith("ESSID:"):
+                                cur_ssid = line.split(":",1)[1].strip().strip('"')
+                                if cur_ssid:
+                                    nets.append({"ssid": cur_ssid, "signal": None, "security": ""})
+                    except Exception:
+                        pass
+        except Exception as e:
+            # Return error info for debugging
+            return {"networks": [], "error": str(e), "debug": "scan failed"}
+        
         # Filter empty SSIDs and sort by signal desc if present
         nets = [n for n in nets if n.get("ssid")]
         nets.sort(key=lambda x: (x.get("signal") or -1), reverse=True)
