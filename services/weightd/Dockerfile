@@ -41,6 +41,7 @@ COPY services/webui/dist /app/app/static
 
 # Copy project logo into static web root
 COPY static/IMG_4293.jpg /app/app/static/logo.jpg
+COPY static/IMG_4293.jpg /app/app/static/logo.png
 
 # Create data dir
 VOLUME ["/data"]
