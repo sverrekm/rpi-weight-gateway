@@ -225,7 +225,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static files - mount BEFORE API routes
+# API routes FIRST - must be before static file mounting
+app.include_router(api_routes.create_router(ctx))
+
+# Static files - mount AFTER API routes to avoid conflicts
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 print(f"[DEBUG] STATIC_DIR: {STATIC_DIR}, exists: {os.path.isdir(STATIC_DIR)}")
 if os.path.isdir(STATIC_DIR):
@@ -237,9 +240,6 @@ else:
     @app.get("/")
     async def serve_fallback():
         return {"message": "Static files not found", "static_dir": STATIC_DIR}
-
-# API routes
-app.include_router(api_routes.create_router(ctx))
 
 
 @app.on_event("startup")
