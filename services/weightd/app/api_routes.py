@@ -230,7 +230,7 @@ persistence_location /mosquitto/data/
             # Build weightd image manually with BASE_IMAGE override
             rc, out = _run_docker([
                 "build", "--build-arg", f"BASE_IMAGE={base}",
-                "-f", "./services/weightd/Dockerfile",
+                "--file", "./services/weightd/Dockerfile",
                 "-t", "rpi-weight-gateway-weightd:latest", "."
             ])
             logs.append(out)
