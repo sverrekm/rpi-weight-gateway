@@ -44,3 +44,6 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+# Example files and documentation
+1506514840__click_examples__other_pic/

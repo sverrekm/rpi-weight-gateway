@@ -53,7 +53,6 @@ services:
   mqtt:
     image: eclipse-mosquitto:2
     container_name: mqtt
-    profiles: ["mqtt"]
     restart: unless-stopped
     volumes:
       - ./data/mosquitto.conf:/mosquitto/config/mosquitto.conf
