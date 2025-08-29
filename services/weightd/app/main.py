@@ -191,14 +191,21 @@ class AppContext:
             if self.cfg.display_enabled and self.stable:
                 try:
                     now = time.time()
-                    # throttle to ~5 Hz and only on meaningful change based on decimals
+                    # throttle to ~2 Hz and only on meaningful change based on decimals
                     resolution = 10 ** (-max(0, int(self.cfg.dp)))
                     changed = (
                         self._last_display_value is None
                         or abs(grams - float(self._last_display_value)) >= resolution
                     )
-                    if changed and (now - self._last_display_sent) > 0.2:
-                        self.display.send(grams)
+                    if changed and (now - self._last_display_sent) > 0.5:  # Increased throttle to prevent overload
+                        # Run display send in thread to prevent blocking main loop
+                        import threading
+                        def send_display():
+                            try:
+                                self.display.send(grams)
+                            except Exception:
+                                pass
+                        threading.Thread(target=send_display, daemon=True).start()
                         self._last_display_value = float(grams)
                         self._last_display_sent = now
                 except Exception:

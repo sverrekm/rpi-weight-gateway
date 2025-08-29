@@ -65,15 +65,18 @@ class DisplaySerial:
             raise RuntimeError("serial port not configured")
         if self._ser and self._ser.is_open:
             return
-        self._ser = serial.Serial(  # type: ignore[attr-defined]
-            port=self.port,
-            baudrate=self.baudrate,
-            bytesize=BYTESIZE_MAP.get(int(self.databits), BYTESIZE_MAP[7]),
-            parity=PARITY_MAP.get(self.parity.upper(), PARITY_MAP["E"]),
-            stopbits=STOPBITS_MAP.get(int(self.stopbits), STOPBITS_MAP[1]),
-            timeout=0.2,
-            write_timeout=0.5,
-        )
+        try:
+            self._ser = serial.Serial(  # type: ignore[attr-defined]
+                port=self.port,
+                baudrate=self.baudrate,
+                bytesize=BYTESIZE_MAP.get(int(self.databits), BYTESIZE_MAP[7]),
+                parity=PARITY_MAP.get(self.parity.upper(), PARITY_MAP["E"]),
+                stopbits=STOPBITS_MAP.get(int(self.stopbits), STOPBITS_MAP[1]),
+                timeout=0.1,  # Reduced timeout to prevent blocking
+                write_timeout=0.2,  # Reduced write timeout
+            )
+        except Exception as e:
+            raise RuntimeError(f"Failed to open serial port {self.port}: {e}")
 
     def close(self) -> None:
         with self._lock:
@@ -121,19 +124,27 @@ class DisplaySerial:
         return STX + payload + CR
 
     def send(self, value: float) -> None:
-        data = self._format_payload(value)
-        frame = self._frame(data)
-        with self._lock:
-            self._ensure_open()
-            assert self._ser is not None
-            self._ser.write(frame)
-            self._ser.flush()
+        try:
+            data = self._format_payload(value)
+            frame = self._frame(data)
+            with self._lock:
+                self._ensure_open()
+                assert self._ser is not None
+                self._ser.write(frame)
+                self._ser.flush()
+        except Exception:
+            # Silently ignore display errors to prevent system freeze
+            pass
 
     def send_text(self, text: str) -> None:
-        payload = text.encode("ascii", errors="ignore")
-        frame = self._frame(payload)
-        with self._lock:
-            self._ensure_open()
-            assert self._ser is not None
-            self._ser.write(frame)
-            self._ser.flush()
+        try:
+            payload = text.encode("ascii", errors="ignore")
+            frame = self._frame(payload)
+            with self._lock:
+                self._ensure_open()
+                assert self._ser is not None
+                self._ser.write(frame)
+                self._ser.flush()
+        except Exception:
+            # Silently ignore display errors to prevent system freeze
+            pass
