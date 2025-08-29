@@ -32,6 +32,9 @@ RUN python -m pip install --upgrade pip setuptools wheel \
 # Copy backend source first (may contain an empty or placeholder app/static)
 COPY services/weightd /app
 
+# Remove any legacy/static files shipped with backend to avoid serving old UI
+RUN rm -rf /app/app/static && mkdir -p /app/app/static
+
 # Now copy pre-built static files from webui on top so they are not overwritten
 # main.py expects STATIC_DIR relative to the "app" package directory
 COPY services/webui/dist /app/app/static
