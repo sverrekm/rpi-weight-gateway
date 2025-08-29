@@ -158,7 +158,7 @@ persistence_location /mosquitto/data/
             if extra_env:
                 env = os.environ.copy()
                 env.update({k: str(v) for k, v in extra_env.items()})
-            proc = subprocess.run(["docker"] + args, capture_output=True, text=True, timeout=60, env=env)
+            proc = subprocess.run(["docker"] + args, capture_output=True, text=True, timeout=60, env=env, cwd="/app/..")
             rc = proc.returncode
             out = (proc.stdout or "") + (proc.stderr or "")
             return rc, out
@@ -169,7 +169,7 @@ persistence_location /mosquitto/data/
     async def broker_restart():
         if not _docker_available():
             return JSONResponse({"error": "docker socket not available in container"}, status_code=501)
-        rc, out = _run_docker(["compose", "-f", "/app/../docker-compose.yml", "restart", "mqtt"])
+        rc, out = _run_docker(["compose", "restart", "mqtt"])
         if rc != 0:
             return JSONResponse({"error": out.strip()}, status_code=500)
         return {"status": "ok"}
@@ -178,7 +178,7 @@ persistence_location /mosquitto/data/
     async def broker_start():
         if not _docker_available():
             return JSONResponse({"error": "docker socket not available in container"}, status_code=501)
-        rc, out = _run_docker(["compose", "-f", "/app/../docker-compose.yml", "up", "-d", "mqtt"])
+        rc, out = _run_docker(["compose", "up", "-d", "mqtt"])
         if rc != 0:
             return JSONResponse({"error": out.strip()}, status_code=500)
         return {"status": "ok"}
@@ -187,7 +187,7 @@ persistence_location /mosquitto/data/
     async def broker_stop():
         if not _docker_available():
             return JSONResponse({"error": "docker socket not available in container"}, status_code=501)
-        rc, out = _run_docker(["compose", "-f", "/app/../docker-compose.yml", "stop", "mqtt"]) 
+        rc, out = _run_docker(["compose", "stop", "mqtt"]) 
         if rc != 0:
             return JSONResponse({"error": out.strip()}, status_code=500)
         return {"status": "ok"}
@@ -205,7 +205,7 @@ persistence_location /mosquitto/data/
             return JSONResponse({"error": "docker socket not available in container"}, status_code=501)
         logs: List[str] = []
         # Pull newer images (no-op if building locally)
-        rc, out = _run_docker(["compose", "-f", "/app/../docker-compose.yml", "pull"])
+        rc, out = _run_docker(["compose", "pull"])
         logs.append(out)
         if rc != 0:
             return JSONResponse({"error": out.strip()}, status_code=500)
@@ -237,7 +237,7 @@ persistence_location /mosquitto/data/
             if rc != 0:
                 return JSONResponse({"error": out.strip()}, status_code=500)
             # Apply without building
-            rc, out = _run_docker(["compose", "-f", "/app/../docker-compose.yml", "up", "-d", "--no-build"])
+            rc, out = _run_docker(["compose", "up", "-d", "--no-build"])
             logs.append(out)
             if rc != 0:
                 return JSONResponse({"error": out.strip()}, status_code=500)
@@ -245,7 +245,7 @@ persistence_location /mosquitto/data/
         # Apply (no rebuild): only if there were updates
         if not updated:
             return {"status": "ok", "action": "no_update", "logs": "\n".join(logs)[-4000:]}
-        rc, out = _run_docker(["compose", "-f", "/app/../docker-compose.yml", "up", "-d"])  # apply only when new images exist
+        rc, out = _run_docker(["compose", "up", "-d"])  # apply only when new images exist
         logs.append(out)
         if rc != 0:
             return JSONResponse({"error": out.strip()}, status_code=500)
