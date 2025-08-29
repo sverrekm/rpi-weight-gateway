@@ -21,6 +21,7 @@ services:
       - MEDIAN_WINDOW=${MEDIAN_WINDOW}
       - SCALE=${SCALE}
       - OFFSET=${OFFSET}
+      - MAX_CAPACITY_G=${MAX_CAPACITY_G:-0}
       - WIFI_AP_SSID=${WIFI_AP_SSID}
       - WIFI_AP_PASS=${WIFI_AP_PASS}
       - AP_COUNTRY=${AP_COUNTRY}
