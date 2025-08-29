@@ -49,21 +49,58 @@ const IndexPage: React.FC = () => {
   const overCap = !!reading && maxCap > 0 && reading.grams > maxCap
 
   return (
-    <div>
-      <h2>Live weight</h2>
+    <div style={{ textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
       {overCap && (
-        <div style={{ background: '#fee2e2', color: '#991b1b', padding: '8px 12px', border: '1px solid #fecaca', borderRadius: 6 }}>
-          Over capacity: {reading!.grams.toFixed(2)} g exceeds {maxCap} g
+        <div style={{ background: '#fee2e2', color: '#991b1b', padding: '12px 16px', border: '1px solid #fecaca', borderRadius: 8, marginBottom: 24, textAlign: 'left' }}>
+          ⚠️ Over capacity: {reading!.grams.toFixed(2)} g exceeds {maxCap} g
         </div>
       )}
-      <div style={{ fontSize: 64, fontWeight: 800, letterSpacing: -1, margin: '24px 0' }}>
-        {grams} g {stable ? '✅' : '...'}
+      
+      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 32, marginBottom: 24 }}>
+        <div style={{ fontSize: 72, fontWeight: 800, letterSpacing: -2, margin: '0 0 8px 0', color: stable ? '#059669' : '#6b7280' }}>
+          {grams} g
+        </div>
+        <div style={{ fontSize: 18, color: '#6b7280', marginBottom: 24 }}>
+          {stable ? '✅ Stable' : '⏳ Measuring...'}
+        </div>
+        
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+          <button 
+            onClick={() => tare()} 
+            style={{ 
+              padding: '12px 24px', 
+              fontSize: 16, 
+              fontWeight: 600,
+              background: '#2563eb', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: 8,
+              cursor: 'pointer'
+            }}
+          >
+            Tare
+          </button>
+          <button 
+            onClick={() => zero()} 
+            style={{ 
+              padding: '12px 24px', 
+              fontSize: 16, 
+              fontWeight: 600,
+              background: '#dc2626', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: 8,
+              cursor: 'pointer'
+            }}
+          >
+            Zero
+          </button>
+        </div>
       </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={() => tare()} style={{ padding: '8px 12px' }}>Tare</button>
-        <button onClick={() => zero()} style={{ padding: '8px 12px' }}>Zero</button>
+      
+      <div style={{ color: '#6b7280', fontSize: 14 }}>
+        Connection: <span style={{ color: status === 'live' ? '#059669' : '#dc2626', fontWeight: 600 }}>{status}</span>
       </div>
-      <div style={{ marginTop: 16, color: '#6b7280' }}>Status: {status}</div>
     </div>
   )
 }
