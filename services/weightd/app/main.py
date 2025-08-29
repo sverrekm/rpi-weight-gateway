@@ -228,10 +228,17 @@ app.add_middleware(
 # API routes
 app.include_router(api_routes.create_router(ctx))
 
-# Static files (built webui) under /app/static
+# Static files (built webui) under /static
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 if os.path.isdir(STATIC_DIR):
-    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    # Serve index.html at root for SPA
+    @app.get("/")
+    async def serve_index():
+        index_path = os.path.join(STATIC_DIR, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        return {"message": "Frontend not found"}
 
 
 @app.on_event("startup")
