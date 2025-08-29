@@ -121,3 +121,25 @@ export async function systemUpdate(rebuild: boolean): Promise<{ status: string; 
   })
   return r.json()
 }
+
+// Wi-Fi APIs
+export async function getWifiStatus(): Promise<{ connected: boolean; ssid?: string; ip?: string }>{
+  const r = await fetch(`${base}/api/wifi/status`)
+  if (!r.ok) throw new Error('wifi status failed')
+  return r.json()
+}
+
+export async function scanWifi(): Promise<{ networks: { ssid: string; signal?: number; security?: string }[] }>{
+  const r = await fetch(`${base}/api/wifi/scan`)
+  if (!r.ok) throw new Error('wifi scan failed')
+  return r.json()
+}
+
+export async function connectWifi(ssid: string, psk?: string): Promise<{ status?: string; error?: string; tool?: string; output?: string }>{
+  const r = await fetch(`${base}/api/wifi/connect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ssid, psk })
+  })
+  return r.json()
+}

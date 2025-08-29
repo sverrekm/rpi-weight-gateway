@@ -5,6 +5,7 @@ import App from './App'
 import IndexPage from './pages/Index'
 import SettingsPage from './pages/Settings'
 import CalibratePage from './pages/Calibrate'
+import WiFiPage from './pages/WiFi'
 
 const Root = () => (
   <BrowserRouter>
@@ -13,6 +14,7 @@ const Root = () => (
         <Route path="/" element={<IndexPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/calibrate" element={<CalibratePage />} />
+        <Route path="/wifi" element={<WiFiPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </App>

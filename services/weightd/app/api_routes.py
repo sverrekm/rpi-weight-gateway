@@ -10,6 +10,7 @@ from typing import List, Callable, Optional, Dict, Any, Tuple
 
 from .models import Reading, CalibrateRequest, Config, Health, WiFiInfo
 from .config import save_config as persist_config
+from . import wifi_detect
 
 
 class WeightHub:
@@ -303,6 +304,102 @@ persistence_location /mosquitto/data/
             return {"ports": items}
         except Exception:
             return {"ports": []}
+
+    # --- Wi-Fi management ---
+    @router.get("/api/wifi/status")
+    async def wifi_status():
+        ssid = wifi_detect.current_ssid()
+        ip = wifi_detect.current_ip()
+        return {"connected": bool(ssid), "ssid": ssid, "ip": ip}
+
+    @router.get("/api/wifi/scan")
+    async def wifi_scan():
+        import shutil, subprocess
+        nets = []
+        try:
+            if shutil.which("nmcli"):
+                out = subprocess.check_output(["nmcli", "-t", "-f", "ssid,signal,security", "dev", "wifi"], text=True, timeout=8)
+                seen = set()
+                for line in out.splitlines():
+                    if not line:
+                        continue
+                    parts = line.split(":")
+                    ssid = parts[0]
+                    if ssid in seen:
+                        continue
+                    seen.add(ssid)
+                    sig = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else None
+                    sec = parts[2] if len(parts) > 2 else ""
+                    nets.append({"ssid": ssid, "signal": sig, "security": sec})
+            else:
+                # Fallback minimal scan via "iwlist" if available
+                if shutil.which("iwlist") and shutil.which("iwgetid"):
+                    # Determine interface via iwgetid -r fails? then default wlan0
+                    try:
+                        iface = subprocess.check_output(["iwgetid", "-r"] , text=True, timeout=3)
+                        iface = (iface or "").strip() or "wlan0"
+                    except Exception:
+                        iface = "wlan0"
+                    out = subprocess.check_output(["iwlist", iface, "scan"], text=True, timeout=12, stderr=subprocess.STDOUT)
+                    cur_ssid = None
+                    for line in out.splitlines():
+                        line = line.strip()
+                        if line.startswith("ESSID:"):
+                            cur_ssid = line.split(":",1)[1].strip().strip('"')
+                            nets.append({"ssid": cur_ssid})
+                # else: leave empty
+        except Exception:
+            pass
+        # Filter empty SSIDs and sort by signal desc if present
+        nets = [n for n in nets if n.get("ssid")]
+        nets.sort(key=lambda x: (x.get("signal") or -1), reverse=True)
+        return {"networks": nets}
+
+    @router.post("/api/wifi/connect")
+    async def wifi_connect(payload: dict):
+        import shutil, subprocess
+        ssid = payload.get("ssid")
+        psk = payload.get("psk")
+        if not isinstance(ssid, str) or not ssid:
+            return JSONResponse({"error": "ssid required"}, status_code=400)
+        # Try nmcli first
+        try:
+            if shutil.which("nmcli"):
+                args = ["nmcli", "dev", "wifi", "connect", ssid]
+                if isinstance(psk, str) and psk:
+                    args += ["password", psk]
+                proc = subprocess.run(args, capture_output=True, text=True, timeout=20)
+                if proc.returncode == 0:
+                    return {"status": "ok", "tool": "nmcli", "output": (proc.stdout or proc.stderr or "").strip()}
+                # If connection exists, try up existing connection
+                # nmcli con up id SSID
+                proc2 = subprocess.run(["nmcli", "con", "up", "id", ssid], capture_output=True, text=True, timeout=15)
+                if proc2.returncode == 0:
+                    return {"status": "ok", "tool": "nmcli", "output": (proc2.stdout or proc2.stderr or "").strip()}
+        except Exception as e:
+            # continue to fallback
+            _ = e
+        # Fallback to wpa_cli
+        try:
+            if shutil.which("wpa_cli"):
+                iface = "wlan0"
+                # add_network
+                aid = subprocess.check_output(["wpa_cli", "-i", iface, "add_network"], text=True, timeout=5).strip()
+                if not aid.isdigit():
+                    return JSONResponse({"error": f"wpa_cli add_network failed: {aid}"}, status_code=500)
+                nid = aid
+                subprocess.check_output(["wpa_cli", "-i", iface, "set_network", nid, "ssid", f'"{ssid}"'], text=True, timeout=5)
+                if isinstance(psk, str) and psk:
+                    subprocess.check_output(["wpa_cli", "-i", iface, "set_network", nid, "psk", f'"{psk}"'], text=True, timeout=5)
+                else:
+                    subprocess.check_output(["wpa_cli", "-i", iface, "set_network", nid, "key_mgmt", "NONE"], text=True, timeout=5)
+                subprocess.check_output(["wpa_cli", "-i", iface, "enable_network", nid], text=True, timeout=5)
+                subprocess.check_output(["wpa_cli", "-i", iface, "select_network", nid], text=True, timeout=5)
+                subprocess.check_output(["wpa_cli", "-i", iface, "save_config"], text=True, timeout=5)
+                return {"status": "ok", "tool": "wpa_cli"}
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+        return JSONResponse({"error": "no supported wifi tools (nmcli/wpa_cli) available"}, status_code=501)
 
     ctx._ws_hub = hub
     return router

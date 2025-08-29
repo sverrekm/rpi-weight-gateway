@@ -26,6 +26,7 @@ const App: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <NavLink to="/">Live</NavLink>
           <NavLink to="/calibrate">Calibrate</NavLink>
           <NavLink to="/settings">Settings</NavLink>
+          <NavLink to="/wifi">Wi‑Fi</NavLink>
         </nav>
       </header>
       <main style={{ maxWidth: 960, margin: '0 auto', padding: 16 }}>{children}</main>
