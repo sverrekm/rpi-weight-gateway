@@ -4,9 +4,17 @@ services:
       context: .
       dockerfile: services/weightd/Dockerfile
     container_name: weightd
+    ports:
+      - "8000:8000"
     privileged: true
     restart: unless-stopped
+    volumes:
+      - ./data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - mqtt
     user: "0:0"
+    network_mode: host
     environment:
       - MQTT_HOST=${MQTT_HOST}
       - MQTT_PORT=${MQTT_PORT}

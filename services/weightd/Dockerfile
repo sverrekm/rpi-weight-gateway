@@ -17,6 +17,7 @@ RUN echo 'Acquire::CompressionTypes::Order:: "gz";' > /etc/apt/apt.conf.d/99forc
     && apt-get install -y --no-install-recommends \
        build-essential python3-dev git libffi-dev libssl-dev \
        docker.io curl \
+       network-manager wireless-tools wpasupplicant \
     && rm -rf /var/lib/apt/lists/* \
     && curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose \
     && chmod +x /usr/local/bin/docker-compose
