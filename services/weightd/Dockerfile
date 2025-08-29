@@ -29,14 +29,15 @@ RUN python -m pip install --upgrade pip setuptools wheel \
     && pip debug --verbose \
     && pip install --no-cache-dir --prefer-binary -r requirements.txt
 
-# Copy pre-built static files from webui into the Python package directory
+# Copy backend source first (may contain an empty or placeholder app/static)
+COPY services/weightd /app
+
+# Now copy pre-built static files from webui on top so they are not overwritten
 # main.py expects STATIC_DIR relative to the "app" package directory
 COPY services/webui/dist /app/app/static
 
 # Copy project logo into static web root
 COPY static/IMG_4293.jpg /app/app/static/logo.jpg
-
-COPY services/weightd /app
 
 # Create data dir
 VOLUME ["/data"]
