@@ -5,3 +5,4 @@ pydantic==1.10.13
 paho-mqtt>=2.0.0
 python-multipart==0.0.9
 pyserial>=3.5
+RPi.GPIO>=0.7.1
