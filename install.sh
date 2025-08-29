@@ -67,6 +67,20 @@ sync_repo() {
   fi
 }
 
+build_frontend() {
+  cd "$INSTALL_DIR"
+  if command -v npm >/dev/null 2>&1; then
+    log "Building React frontend..."
+    cd services/webui
+    npm install
+    npm run build
+    cd ../..
+    log "Frontend build complete"
+  else
+    log "npm not found, skipping frontend build (using committed dist/ files)"
+  fi
+}
+
 prepare_config() {
   cd "$INSTALL_DIR"
   mkdir -p data data/mosquitto
@@ -122,6 +136,7 @@ main() {
   parse_args "$@"
   ensure_docker
   sync_repo
+  build_frontend
   prepare_config
   compose_up
   log "Done. To manage services: cd $INSTALL_DIR && docker compose ps"
