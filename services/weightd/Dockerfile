@@ -17,6 +17,7 @@ RUN echo 'Acquire::CompressionTypes::Order:: "gz";' > /etc/apt/apt.conf.d/99forc
     && apt-get update \
     && apt-get install -y --no-install-recommends \
        build-essential python3-dev git libffi-dev libssl-dev \
+       docker.io docker-compose \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy backend

@@ -6,6 +6,7 @@ services:
     container_name: weightd
     privileged: true
     restart: unless-stopped
+    user: "0:0"
     environment:
       - MQTT_HOST=${MQTT_HOST}
       - MQTT_PORT=${MQTT_PORT}
