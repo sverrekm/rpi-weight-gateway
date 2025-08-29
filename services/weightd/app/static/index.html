@@ -185,48 +185,48 @@
       </form>
       <p class="hint">If you don't see readings: turn on Demo mode to validate UI, then try the Pi2 Click preset for your socket.</p>
     </section>
-  </main>
 
-  <section class="panel">
-    <div class="panel-head">
-      <h2>Broker</h2>
-      <span class="muted">Manage Mosquitto</span>
-    </div>
-    <div class="grid">
-      <div style="grid-column:1/-1">
-        <div class="chip" id="brokerStatus">Broker: unknown</div>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Broker</h2>
+        <span class="muted">Manage Mosquitto</span>
       </div>
-      <label style="grid-column:1/-1">mosquitto.conf
-        <textarea id="brokerConf" rows="10" style="width:100%" placeholder="listener 1883 0.0.0.0\nallow_anonymous true\n..."></textarea>
-      </label>
-    </div>
-    <div class="actions">
-      <button id="btnBrokerSave" class="primary" type="button">Save Config</button>
-      <button id="btnBrokerRestart" type="button">Restart</button>
-      <button id="btnBrokerStart" type="button">Start</button>
-      <button id="btnBrokerStop" type="button">Stop</button>
-      <span id="brokerMsg"></span>
-    </div>
-    <p class="hint">Requires Docker access inside container for start/stop/restart. Config is stored at /data/mosquitto.conf and mounted into the MQTT service.</p>
-  </section>
+      <div class="grid">
+        <div style="grid-column:1/-1">
+          <div class="chip" id="brokerStatus">Broker: unknown</div>
+        </div>
+        <label style="grid-column:1/-1">mosquitto.conf
+          <textarea id="brokerConf" rows="10" style="width:100%" placeholder="listener 1883 0.0.0.0\nallow_anonymous true\n..."></textarea>
+        </label>
+      </div>
+      <div class="actions">
+        <button id="btnBrokerSave" class="primary" type="button">Save Config</button>
+        <button id="btnBrokerRestart" type="button">Restart</button>
+        <button id="btnBrokerStart" type="button">Start</button>
+        <button id="btnBrokerStop" type="button">Stop</button>
+        <span id="brokerMsg"></span>
+      </div>
+      <p class="hint">Requires Docker access inside container for start/stop/restart. Config is stored at /data/mosquitto.conf and mounted into the MQTT service.</p>
+    </section>
 
-  <section class="panel">
-    <div class="panel-head">
-      <h2>System Update</h2>
-      <span class="muted">Check for new version and apply</span>
-    </div>
-    <div class="grid">
-      <label>
-        <input type="checkbox" id="chkRebuild" /> Rebuild locally
-        <small class="hint">Use if running from local source instead of pulling images</small>
-      </label>
-    </div>
-    <div class="actions">
-      <button id="btnUpdate" type="button">Check & Update</button>
-      <span id="updateMsg"></span>
-    </div>
-    <pre id="updateLogs" style="max-height:220px;overflow:auto;background:#111;color:#ddd;padding:8px;border-radius:4px"></pre>
-  </section>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>System Update</h2>
+        <span class="muted">Check for new version and apply</span>
+      </div>
+      <div class="grid">
+        <label>
+          <input type="checkbox" id="chkRebuild" /> Rebuild locally
+          <small class="hint">Use if running from local source instead of pulling images</small>
+        </label>
+      </div>
+      <div class="actions">
+        <button id="btnUpdate" type="button">Check & Update</button>
+        <span id="updateMsg"></span>
+      </div>
+      <pre id="updateLogs" style="max-height:220px;overflow:auto;background:#111;color:#ddd;padding:8px;border-radius:4px"></pre>
+    </section>
+  </main>
 
   <footer>
     <div class="footer-inner">
