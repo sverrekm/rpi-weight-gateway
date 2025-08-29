@@ -1,17 +1,6 @@
-# --- Stage 1: webui builder ---
-ARG BASE_IMAGE=python:3.9-bookworm
-ARG NODE_IMAGE=node:18-bullseye
-FROM ${NODE_IMAGE} AS webui-builder
-WORKDIR /webui
-# Copy web UI sources and build with Vite to produce a self-contained dist (no external CDNs)
-COPY services/webui/package.json services/webui/package-lock.json* ./
-RUN npm ci || npm i --no-audit --no-fund
-COPY services/webui/ .
-RUN npm run build
-
-# --- Stage 2: runtime ---
 # Allow overriding base image for architecture compatibility (e.g., arm32v7/ or arm64v8/)
-FROM ${BASE_IMAGE} AS runtime
+ARG BASE_IMAGE=python:3.9-bookworm
+FROM ${BASE_IMAGE}
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -39,15 +28,8 @@ RUN python -m pip install --upgrade pip setuptools wheel \
     && pip debug --verbose \
     && pip install --no-cache-dir --prefer-binary -r requirements.txt
 
-# Copy backend source first (may contain an empty or placeholder app/static)
+# Copy backend source including static files
 COPY services/weightd /app
-
-# Remove any legacy/static files shipped with backend to avoid serving old UI
-RUN rm -rf /app/app/static && mkdir -p /app/app/static
-
-# Now copy the freshly built static files from the webui builder stage
-# main.py expects STATIC_DIR relative to the "app" package directory
-COPY --from=webui-builder /webui/dist /app/app/static
 
 # Copy project logo into static web root
 COPY static/IMG_4293.jpg /app/app/static/logo.jpg
