@@ -197,15 +197,28 @@ class AppContext:
                         self._last_display_value is None
                         or abs(grams - float(self._last_display_value)) >= resolution
                     )
-                    if changed and (now - self._last_display_sent) > 0.5:  # Increased throttle to prevent overload
-                        # Run display send in thread to prevent blocking main loop
+                    if changed and (now - self._last_display_sent) > 1.0:  # Further increased throttle to 1Hz
+                        # Run display send in thread with timeout to prevent blocking main loop
                         import threading
+                        import signal
+                        
                         def send_display():
                             try:
+                                # Set alarm to kill thread if it hangs
+                                def timeout_handler(signum, frame):
+                                    raise TimeoutError("Display send timeout")
+                                
+                                signal.signal(signal.SIGALRM, timeout_handler)
+                                signal.alarm(1)  # 1 second timeout
+                                
                                 self.display.send(grams)
+                                signal.alarm(0)  # Cancel alarm
                             except Exception:
+                                signal.alarm(0)  # Cancel alarm on error
                                 pass
-                        threading.Thread(target=send_display, daemon=True).start()
+                        
+                        thread = threading.Thread(target=send_display, daemon=True)
+                        thread.start()
                         self._last_display_value = float(grams)
                         self._last_display_sent = now
                 except Exception:

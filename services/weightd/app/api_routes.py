@@ -326,6 +326,34 @@ persistence_location /mosquitto/data/
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
+    @router.post("/api/display/configure")
+    async def display_configure(payload: dict):
+        """Configure ND5052 display parameters using programming mode."""
+        if not ctx.cfg.display_enabled:
+            return JSONResponse({"error": "display not enabled"}, status_code=400)
+        try:
+            success = ctx.display.configure_display(payload)
+            if success:
+                return {"status": "ok", "message": "Display configured successfully"}
+            else:
+                return JSONResponse({"error": "Configuration failed"}, status_code=500)
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
+    @router.get("/api/display/status")
+    async def display_status():
+        """Get ND5052 display status and parameters."""
+        if not ctx.cfg.display_enabled:
+            return JSONResponse({"error": "display not enabled"}, status_code=400)
+        try:
+            status = ctx.display.get_status()
+            if status:
+                return {"status": "ok", "parameters": status}
+            else:
+                return JSONResponse({"error": "Could not read display status"}, status_code=500)
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
     @router.get("/api/display/ports")
     async def display_ports():
         try:

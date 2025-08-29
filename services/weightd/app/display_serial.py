@@ -26,14 +26,17 @@ BYTESIZE_MAP = {
 STX = b"\x02"
 SOH = b"\x01"
 CR = b"\x0D"
+ESC = b"\x1B"
 
 
 class DisplaySerial:
     """
-    Simple RS-232/RS-485 sender for ND5052-like displays.
-    Formats frames:
+    ND5052 Display Controller with protocol support.
+    Supports Norsk Display Standard Protocol:
       - Unaddressed: STX + data + CR
       - Addressed:   STX + SOH + AA + STX + data + CR   (AA are two ASCII digits)
+    
+    Programming mode: Send <Esc>P 16 times to enter config mode at 9600,8,N,1
     """
 
     def __init__(
@@ -46,6 +49,7 @@ class DisplaySerial:
         dp: int = 2,
         unit: str = "kg",
         address: Optional[str] = None,
+        protocol: str = "standard",
     ) -> None:
         self.port = port
         self.baudrate = baudrate
@@ -55,6 +59,7 @@ class DisplaySerial:
         self.dp = max(0, int(dp))
         self.unit = unit or ""
         self.address = address if address else None
+        self.protocol = protocol
         self._ser: Optional[serial.Serial] = None  # type: ignore[attr-defined]
         self._lock = threading.Lock()
 
@@ -72,10 +77,15 @@ class DisplaySerial:
                 bytesize=BYTESIZE_MAP.get(int(self.databits), BYTESIZE_MAP[7]),
                 parity=PARITY_MAP.get(self.parity.upper(), PARITY_MAP["E"]),
                 stopbits=STOPBITS_MAP.get(int(self.stopbits), STOPBITS_MAP[1]),
-                timeout=0.1,  # Reduced timeout to prevent blocking
-                write_timeout=0.2,  # Reduced write timeout
+                timeout=0.01,  # Very short timeout to prevent blocking
+                write_timeout=0.01,  # Very short write timeout
+                inter_byte_timeout=0.01,  # Prevent hanging between bytes
             )
+            # Test the connection immediately
+            if not self._ser.is_open:
+                raise RuntimeError("Serial port failed to open")
         except Exception as e:
+            self._ser = None
             raise RuntimeError(f"Failed to open serial port {self.port}: {e}")
 
     def close(self) -> None:
@@ -128,12 +138,25 @@ class DisplaySerial:
             data = self._format_payload(value)
             frame = self._frame(data)
             with self._lock:
+                # Close and reopen connection each time to prevent hanging
+                self.close()
                 self._ensure_open()
-                assert self._ser is not None
-                self._ser.write(frame)
-                self._ser.flush()
+                if self._ser is None or not self._ser.is_open:
+                    return  # Skip if can't open
+                
+                # Write with immediate timeout
+                try:
+                    self._ser.write(frame)
+                    # Don't flush - it can cause hanging
+                except serial.SerialTimeoutException:
+                    pass  # Ignore timeout
+                except Exception:
+                    pass  # Ignore other write errors
+                finally:
+                    # Always close after write to prevent hanging
+                    self.close()
         except Exception:
-            # Silently ignore display errors to prevent system freeze
+            # Silently ignore all display errors to prevent system freeze
             pass
 
     def send_text(self, text: str) -> None:
@@ -141,10 +164,23 @@ class DisplaySerial:
             payload = text.encode("ascii", errors="ignore")
             frame = self._frame(payload)
             with self._lock:
+                # Close and reopen connection each time to prevent hanging
+                self.close()
                 self._ensure_open()
-                assert self._ser is not None
-                self._ser.write(frame)
-                self._ser.flush()
+                if self._ser is None or not self._ser.is_open:
+                    return  # Skip if can't open
+                
+                # Write with immediate timeout
+                try:
+                    self._ser.write(frame)
+                    # Don't flush - it can cause hanging
+                except serial.SerialTimeoutException:
+                    pass  # Ignore timeout
+                except Exception:
+                    pass  # Ignore other write errors
+                finally:
+                    # Always close after write to prevent hanging
+                    self.close()
         except Exception:
-            # Silently ignore display errors to prevent system freeze
+            # Silently ignore all display errors to prevent system freeze
             pass
