@@ -139,7 +139,7 @@
             <div class="grid" style="margin-top:8px;">
               <label>MQTT Host <input name="mqtt_host" /></label>
               <label>MQTT Port <input name="mqtt_port" type="number" min="1" max="65535" /></label>
-              <label>MQTT User <input name="mqtt_user" /></label>
+              <label>MQTT User <input name="mqtt_user" autocomplete="username" /></label>
               <label>MQTT Pass <input name="mqtt_pass" type="password" autocomplete="current-password" /></label>
               <label>Weight Topic <input name="weight_topic" /></label>
               <label>Status Topic <input name="status_topic" /></label>
@@ -232,24 +232,26 @@
         <h2>WiFi</h2>
         <span class="muted">Manage wireless connection</span>
       </div>
-      <div class="grid">
-        <div style="grid-column:1/-1">
-          <div class="chip" id="wifiStatus">WiFi: unknown</div>
+      <form id="wifiForm">
+        <div class="grid">
+          <div style="grid-column:1/-1">
+            <div class="chip" id="wifiStatus">WiFi: unknown</div>
+          </div>
+          <label style="grid-column:1/-1">Available Networks
+            <select id="wifiNetworks" name="ssid" style="width:100%" autocomplete="off">
+              <option value="">Select network...</option>
+            </select>
+          </label>
+          <label style="grid-column:1/-1">Password
+            <input id="wifiPassword" name="password" type="password" placeholder="Enter password" autocomplete="current-password" />
+          </label>
         </div>
-        <label style="grid-column:1/-1">Available Networks
-          <select id="wifiNetworks" style="width:100%">
-            <option value="">Select network...</option>
-          </select>
-        </label>
-        <label style="grid-column:1/-1">Password
-          <input id="wifiPassword" type="password" placeholder="Enter password" autocomplete="new-password" />
-        </label>
-      </div>
-      <div class="actions">
-        <button id="btnWifiScan" type="button">Scan Networks</button>
-        <button id="btnWifiConnect" class="primary" type="button">Connect</button>
-        <span id="wifiMsg"></span>
-      </div>
+        <div class="actions">
+          <button id="btnWifiScan" type="button">Scan Networks</button>
+          <button id="btnWifiConnect" class="primary" type="button">Connect</button>
+          <span id="wifiMsg"></span>
+        </div>
+      </form>
       <p class="hint">Scan for available networks, select one, enter password if required, and connect. Current connection status shown above.</p>
     </section>
   </main>

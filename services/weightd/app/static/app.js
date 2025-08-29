@@ -49,6 +49,7 @@ const $wifiPassword = qs('#wifiPassword');
 const $btnWifiScan = qs('#btnWifiScan');
 const $btnWifiConnect = qs('#btnWifiConnect');
 const $wifiMsg = qs('#wifiMsg');
+const $wifiForm = qs('#wifiForm');
 const $chkRebuild = qs('#chkRebuild');
 const $updateMsg = qs('#updateMsg');
 const $updateLogs = qs('#updateLogs');
@@ -438,7 +439,14 @@ function bindActions() {
     catch(e){ $dispMsg.textContent = 'Error: ' + e.message; }
   });
 
-  // WiFi actions
+  // WiFi form and actions
+  if ($wifiForm) {
+    $wifiForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if ($btnWifiConnect) $btnWifiConnect.click();
+    });
+  }
+
   if ($btnWifiScan) $btnWifiScan.addEventListener('click', async () => {
     $wifiMsg.textContent = 'Scanning...';
     try {
