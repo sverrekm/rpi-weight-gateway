@@ -4,13 +4,8 @@ services:
       context: .
       dockerfile: services/weightd/Dockerfile
     container_name: weightd
-    ports:
-      - "8000:8000"
     privileged: true
     restart: unless-stopped
-    volumes:
-      - ./data:/data
-      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - mqtt
     user: "0:0"
@@ -51,7 +46,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     devices:
       - "/dev/ttyUSB0:/dev/ttyUSB0"
-    network_mode: host
+      - "/dev/ttyUSB1:/dev/ttyUSB1"
+      - "/dev/ttyACM0:/dev/ttyACM0"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
       interval: 15s
