@@ -231,6 +231,11 @@ print(f"[DEBUG] STATIC_DIR: {STATIC_DIR}, exists: {os.path.isdir(STATIC_DIR)}")
 if os.path.isdir(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     print(f"[DEBUG] Mounted static files at /static")
+    # If Vite-style hashed assets exist under 'assets/', expose them at '/assets'
+    ASSETS_DIR = os.path.join(STATIC_DIR, "assets")
+    if os.path.isdir(ASSETS_DIR):
+        app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
+        print(f"[DEBUG] Mounted assets at /assets")
     
     # Serve index.html at root for SPA
     @app.get("/")
