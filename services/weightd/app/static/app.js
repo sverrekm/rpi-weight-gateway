@@ -13,6 +13,8 @@ const $known = qs('#knownGrams');
 const $calibStatus = qs('#calibStatus');
 const $cfgForm = qs('#cfgForm');
 const $cfgStatus = qs('#cfgStatus');
+const $btnNavMain = qs('#btnNavMain');
+const $btnNavConfig = qs('#btnNavConfig');
 const $ws = qs('#ws');
 const $lastTs = qs('#lastTs');
 const $gpioPresets = qs('#gpioPresets');
@@ -389,9 +391,11 @@ function bindActions() {
 
 // Navigation functionality
 function showView(viewId) {
+  console.log('showView called with:', viewId);
   const views = ['mainView', 'configView'];
   views.forEach(id => {
     const view = document.getElementById(id);
+    console.log(`View ${id}:`, view, 'setting display to:', id === viewId ? 'block' : 'none');
     if (view) view.style.display = id === viewId ? 'block' : 'none';
   });
   
@@ -400,22 +404,27 @@ function showView(viewId) {
   navBtns.forEach(btn => btn.classList.remove('active'));
   
   if (viewId === 'mainView') {
-    document.getElementById('btnNavMain')?.classList.add('active');
+    $btnNavMain?.classList.add('active');
   } else if (viewId === 'configView') {
-    document.getElementById('btnNavConfig')?.classList.add('active');
+    $btnNavConfig?.classList.add('active');
   }
 }
 
 function bindNavigation() {
-  const btnNavMain = document.getElementById('btnNavMain');
-  const btnNavConfig = document.getElementById('btnNavConfig');
+  console.log('Binding navigation - btnNavMain:', $btnNavMain, 'btnNavConfig:', $btnNavConfig);
   
-  if (btnNavMain) {
-    btnNavMain.addEventListener('click', () => showView('mainView'));
+  if ($btnNavMain) {
+    $btnNavMain.addEventListener('click', () => {
+      console.log('Main button clicked');
+      showView('mainView');
+    });
   }
   
-  if (btnNavConfig) {
-    btnNavConfig.addEventListener('click', () => showView('configView'));
+  if ($btnNavConfig) {
+    $btnNavConfig.addEventListener('click', () => {
+      console.log('Config button clicked');
+      showView('configView');
+    });
   }
 }
 
