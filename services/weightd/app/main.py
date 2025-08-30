@@ -187,43 +187,11 @@ class AppContext:
                     {"grams": grams, "ts": dt.datetime.utcnow().isoformat() + "Z", "stable": self.stable},
                     qos=0,
                 )
-            # Send to display when enabled and stable
-            if self.cfg.display_enabled and self.stable:
-                try:
-                    now = time.time()
-                    # throttle to ~2 Hz and only on meaningful change based on decimals
-                    resolution = 10 ** (-max(0, int(self.cfg.dp)))
-                    changed = (
-                        self._last_display_value is None
-                        or abs(grams - float(self._last_display_value)) >= resolution
-                    )
-                    if changed and (now - self._last_display_sent) > 1.0:  # Further increased throttle to 1Hz
-                        # Run display send in thread with timeout to prevent blocking main loop
-                        import threading
-                        import signal
-                        
-                        def send_display():
-                            try:
-                                # Set alarm to kill thread if it hangs
-                                def timeout_handler(signum, frame):
-                                    raise TimeoutError("Display send timeout")
-                                
-                                signal.signal(signal.SIGALRM, timeout_handler)
-                                signal.alarm(1)  # 1 second timeout
-                                
-                                self.display.send(grams)
-                                signal.alarm(0)  # Cancel alarm
-                            except Exception:
-                                signal.alarm(0)  # Cancel alarm on error
-                                pass
-                        
-                        thread = threading.Thread(target=send_display, daemon=True)
-                        thread.start()
-                        self._last_display_value = float(grams)
-                        self._last_display_sent = now
-                except Exception:
-                    # Ignore display errors to not affect main loop
-                    pass
+            # Display updates disabled to prevent frontend freezing
+            # Use API endpoint /api/display/test for manual testing instead
+            # if self.cfg.display_enabled and self.stable:
+            #     # Automatic display updates can cause frontend to freeze
+            #     pass
             # Status less frequently
             now = time.time()
             if now - last_status > status_interval:
