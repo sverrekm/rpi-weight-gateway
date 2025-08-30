@@ -134,11 +134,44 @@ class DisplaySerial:
         return STX + payload + CR
 
     def send(self, value: float) -> None:
-        # Completely disable display communication to prevent container freezing
-        # Serial communication causes blocking that freezes the entire container
-        return
+        try:
+            # Format value based on unit setting
+            if self.unit.lower() == 'kg':
+                kg_value = value / 1000.0
+                formatted = f"{kg_value:.1f}".replace('.', ',')
+                display_text = f"{formatted} {self.unit}"
+            else:
+                formatted = f"{value:.2f}".replace('.', ',')
+                display_text = f"{formatted} {self.unit}"
+            
+            # Send formatted text instead of raw value
+            self.send_text(display_text)
+        except Exception:
+            # Silently ignore all display errors
+            pass
 
     def send_text(self, text: str) -> None:
-        # Completely disable display communication to prevent container freezing
-        # Serial communication causes blocking that freezes the entire container
-        return
+        try:
+            payload = text.encode("ascii", errors="ignore")
+            frame = self._frame(payload)
+            with self._lock:
+                # Close and reopen connection each time to prevent hanging
+                self.close()
+                self._ensure_open()
+                if self._ser is None or not self._ser.is_open:
+                    return  # Skip if can't open
+                
+                # Write with immediate timeout
+                try:
+                    self._ser.write(frame)
+                    # Don't flush - it can cause hanging
+                except serial.SerialTimeoutException:
+                    pass  # Ignore timeout
+                except Exception:
+                    pass  # Ignore other write errors
+                finally:
+                    # Always close after write to prevent hanging
+                    self.close()
+        except Exception:
+            # Silently ignore all display errors to prevent system freeze
+            pass

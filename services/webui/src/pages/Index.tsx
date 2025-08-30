@@ -7,6 +7,7 @@ const IndexPage: React.FC = () => {
   const [reading, setReading] = useState<R | null>(null)
   const [status, setStatus] = useState<string>('connecting...')
   const [maxCap, setMaxCap] = useState<number>(0)
+  const [unit, setUnit] = useState<'g' | 'kg'>('g')
   const wsRef = useRef<WebSocket | null>(null)
 
   useEffect(() => {
@@ -44,7 +45,16 @@ const IndexPage: React.FC = () => {
     return () => clearInterval(t)
   }, [])
 
-  const grams = reading ? reading.grams.toFixed(2) : '---'
+  // Unit conversion and formatting
+  const formatValue = (grams: number) => {
+    if (unit === 'kg') {
+      const kg = grams / 1000
+      return kg.toFixed(1).replace('.', ',')
+    }
+    return grams.toFixed(2).replace('.', ',')
+  }
+  
+  const displayValue = reading ? formatValue(reading.grams) : '---'
   const stable = reading?.stable
   const overCap = !!reading && maxCap > 0 && reading.grams > maxCap
 
@@ -57,8 +67,44 @@ const IndexPage: React.FC = () => {
       )}
       
       <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 32, marginBottom: 24 }}>
+        {/* Unit selector */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+          <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 8, padding: 4 }}>
+            <button
+              onClick={() => setUnit('g')}
+              style={{
+                padding: '8px 16px',
+                fontSize: 14,
+                fontWeight: 600,
+                background: unit === 'g' ? '#2563eb' : 'transparent',
+                color: unit === 'g' ? '#fff' : '#6b7280',
+                border: 'none',
+                borderRadius: 4,
+                cursor: 'pointer'
+              }}
+            >
+              gram (g)
+            </button>
+            <button
+              onClick={() => setUnit('kg')}
+              style={{
+                padding: '8px 16px',
+                fontSize: 14,
+                fontWeight: 600,
+                background: unit === 'kg' ? '#2563eb' : 'transparent',
+                color: unit === 'kg' ? '#fff' : '#6b7280',
+                border: 'none',
+                borderRadius: 4,
+                cursor: 'pointer'
+              }}
+            >
+              kilogram (kg)
+            </button>
+          </div>
+        </div>
+        
         <div style={{ fontSize: 72, fontWeight: 800, letterSpacing: -2, margin: '0 0 8px 0', color: stable ? '#059669' : '#6b7280' }}>
-          {grams} g
+          {displayValue} {unit}
         </div>
         <div style={{ fontSize: 18, color: '#6b7280', marginBottom: 24 }}>
           {stable ? '✅ Stable' : '⏳ Measuring...'}
