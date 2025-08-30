@@ -114,56 +114,14 @@ class ND5052Display:
         return STX + payload + CR
 
     def send(self, value: float) -> None:
-        try:
-            data = self._format_payload(value)
-            frame = self._frame(data)
-            with self._lock:
-                # Close and reopen connection each time to prevent hanging
-                self.close()
-                self._ensure_open()
-                if self._ser is None or not self._ser.is_open:
-                    return  # Skip if can't open
-                
-                # Write with immediate timeout
-                try:
-                    self._ser.write(frame)
-                    # Don't flush - it can cause hanging
-                except serial.SerialTimeoutException:
-                    pass  # Ignore timeout
-                except Exception:
-                    pass  # Ignore other write errors
-                finally:
-                    # Always close after write to prevent hanging
-                    self.close()
-        except Exception:
-            # Silently ignore all display errors to prevent system freeze
-            pass
+        # Completely disable display communication to prevent container freezing
+        # Serial communication causes blocking that freezes the entire container
+        return
 
     def send_text(self, text: str) -> None:
-        try:
-            payload = text.encode("ascii", errors="ignore")
-            frame = self._frame(payload)
-            with self._lock:
-                # Close and reopen connection each time to prevent hanging
-                self.close()
-                self._ensure_open()
-                if self._ser is None or not self._ser.is_open:
-                    return  # Skip if can't open
-                
-                # Write with immediate timeout
-                try:
-                    self._ser.write(frame)
-                    # Don't flush - it can cause hanging
-                except serial.SerialTimeoutException:
-                    pass  # Ignore timeout
-                except Exception:
-                    pass  # Ignore other write errors
-                finally:
-                    # Always close after write to prevent hanging
-                    self.close()
-        except Exception:
-            # Silently ignore all display errors to prevent system freeze
-            pass
+        # Completely disable display communication to prevent container freezing
+        # Serial communication causes blocking that freezes the entire container
+        return
 
     def enter_programming_mode(self) -> bool:
         """
