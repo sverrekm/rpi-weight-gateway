@@ -40,9 +40,8 @@ RUN python -m pip install --upgrade pip setuptools wheel \
 # Copy backend source
 COPY services/weightd /app
 
-# Install Node.js for building React frontend
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs
+# Install Node.js for building React frontend (ARM-compatible)
+RUN apt-get update && apt-get install -y nodejs npm
 
 # Copy and build React frontend
 COPY services/webui /tmp/webui
