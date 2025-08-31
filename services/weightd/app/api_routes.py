@@ -354,6 +354,36 @@ persistence_location /mosquitto/data/
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
+    @router.post("/api/display/unit")
+    async def update_display_unit(payload: dict):
+        """Update the display unit (g/kg)."""
+        if not ctx.cfg.display_enabled:
+            return JSONResponse({"error": "display not enabled"}, status_code=400)
+        try:
+            unit = payload.get("unit", "kg").lower()
+            if unit not in ["g", "kg"]:
+                return JSONResponse({"error": "unit must be 'g' or 'kg'"}, status_code=400)
+            
+            # Update the display configuration
+            ctx.display.update_config(
+                port=ctx.cfg.serial_port,
+                baudrate=ctx.cfg.baudrate,
+                databits=ctx.cfg.databits,
+                parity=ctx.cfg.parity,
+                stopbits=ctx.cfg.stopbits,
+                dp=ctx.cfg.dp,
+                unit=unit,
+                address=ctx.cfg.address
+            )
+            
+            # Update the config file
+            ctx.cfg.unit = unit
+            await persist_config(ctx.cfg)
+            
+            return {"status": "ok", "unit": unit}
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
     @router.get("/api/display/ports")
     async def display_ports():
         try:

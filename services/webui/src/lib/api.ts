@@ -55,9 +55,14 @@ export async function tare() {
   await fetch(`${base}/api/tare`, { method: 'POST' })
 }
 
-export async function zero() {
-  await fetch(`${base}/api/zero`, { method: 'POST' })
-}
+export const zero = () => fetch('/api/zero', { method: 'POST' });
+
+export const updateDisplayUnit = (unit: string) => 
+  fetch('/api/display/unit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ unit })
+  });
 
 export async function calibrate(known_grams: number) {
   const r = await fetch(`${base}/api/calibrate`, {

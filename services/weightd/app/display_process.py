@@ -6,7 +6,6 @@ import os
 import signal
 import time
 import multiprocessing as mp
-from multiprocessing.synchronize import Event as EventType
 from typing import Optional, Dict, Any, Tuple, Union
 import logging
 
@@ -19,8 +18,8 @@ class DisplayProcess:
         """Initialize display process with configuration."""
         self.config = config
         self.display: Optional[DisplaySerial] = None
-        self._process: Optional[mp.Process] = None
-        self._queue: Optional[mp.Queue] = None
+        self._process = None
+        self._queue = None
         self._stop_event = mp.Event()
 
     def start(self) -> None:
@@ -75,7 +74,7 @@ class DisplayProcess:
                 logger.warning(f"Failed to send config to display process: {e}")
 
     @classmethod
-    def _run(cls, config: Dict[str, Any], queue: 'mp.Queue[Tuple[str, Any]]', stop_event: EventType) -> None:
+    def _run(cls, config: Dict[str, Any], queue: 'mp.Queue', stop_event: Any) -> None:
         """Main process loop for handling display updates."""
         # Set up process
         signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -83,18 +82,19 @@ class DisplayProcess:
         
         display = None
         last_value: Optional[float] = None
+        current_config = config.copy()
         
         try:
             # Initialize display
             display = DisplaySerial(
-                port=config.get("serial_port"),
-                baudrate=config.get("baudrate", 9600),
-                databits=config.get("databits", 7),
-                parity=config.get("parity", "E"),
-                stopbits=config.get("stopbits", 1),
-                dp=config.get("dp", 2),
-                unit=config.get("unit", "kg"),
-                address=config.get("address"),
+                port=current_config.get("serial_port"),
+                baudrate=current_config.get("baudrate", 9600),
+                databits=current_config.get("databits", 7),
+                parity=current_config.get("parity", "E"),
+                stopbits=current_config.get("stopbits", 1),
+                dp=current_config.get("dp", 2),
+                unit=current_config.get("unit", "kg"),
+                address=current_config.get("address"),
             )
             
             logger.info("Display process started")
@@ -108,32 +108,42 @@ class DisplayProcess:
                         msg_type, data = msg
                         if msg_type == "weight":
                             last_value = data
+                            if display:
+                                display.send(data)
                         elif msg_type == "config":
-                            display.update_config(
-                                port=data.get("serial_port"),
-                                baudrate=data.get("baudrate"),
-                                databits=data.get("databits"),
-                                parity=data.get("parity"),
-                                stopbits=data.get("stopbits"),
-                                dp=data.get("dp"),
-                                unit=data.get("unit"),
-                                address=data.get("address"),
-                            )
+                            # Update the current configuration
+                            current_config.update(data)
+                            if display:
+                                display.update_config(
+                                    port=current_config.get("serial_port"),
+                                    baudrate=current_config.get("baudrate", 9600),
+                                    databits=current_config.get("databits", 7),
+                                    parity=current_config.get("parity", "E"),
+                                    stopbits=current_config.get("stopbits", 1),
+                                    dp=current_config.get("dp", 2),
+                                    unit=current_config.get("unit", "kg"),
+                                    address=current_config.get("address"),
+                                )
+                                logger.info(f"Display config updated: unit={current_config.get('unit', 'kg')}")
+                                # Resend last value with new unit
+                                if last_value is not None:
+                                    display.send(last_value)
                     except mp.queues.Empty:
                         pass  # No message, continue
                     
-                    # Update display if we have a value
-                    if last_value is not None:
-                        try:
-                            display.send(last_value)
-                        except Exception as e:
-                            logger.warning(f"Display update failed: {e}")
-                            # Reinitialize display on error
+                    # Periodically resend last value to keep display updated
+                    if last_value is not None and (time.time() % 5) < 0.1:  # ~every 5 seconds
+                        if display and last_value is not None:
                             try:
-                                display.close()
-                                time.sleep(0.5)
-                            except:
-                                pass
+                                display.send(last_value)
+                            except Exception as e:
+                                logger.warning(f"Display update failed: {e}")
+                                # Reinitialize display on error
+                                try:
+                                    display.close()
+                                    time.sleep(0.5)
+                                except:
+                                    pass
                 
                 except mp.queues.Empty:
                     pass  # No message, continue

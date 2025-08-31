@@ -101,19 +101,35 @@ class AppContext:
         self.cfg.scale = scale
         return scale
 
-    def update_config(self, new_cfg: Config) -> None:
-        # Update runtime and persist
-        recreate_reader = (
-            new_cfg.gpio_dout != self.cfg.gpio_dout
-            or new_cfg.gpio_sck != self.cfg.gpio_sck
-            or new_cfg.demo_mode != self.cfg.demo_mode
-        )
+    def update_config(self, new_cfg: Config):
+        """Update configuration and restart components if needed."""
+        # Save old values for comparison
+        old_cfg = self.cfg
         self.cfg = new_cfg
-        if recreate_reader:
-            try:
-                self.reader.close()
-            except Exception:
-                pass
+        
+        # Check if display settings changed
+        display_settings_changed = (
+            old_cfg.serial_port != new_cfg.serial_port
+            or old_cfg.baudrate != new_cfg.baudrate
+            or old_cfg.databits != new_cfg.databits
+            or old_cfg.parity != new_cfg.parity
+            or old_cfg.stopbits != new_cfg.stopbits
+            or old_cfg.dp != new_cfg.dp
+            or old_cfg.unit != new_cfg.unit
+            or old_cfg.address != new_cfg.address
+        )
+        
+        # Update HX711 if needed
+        if (
+            old_cfg.gpio_dout != new_cfg.gpio_dout
+            or old_cfg.gpio_sck != new_cfg.gpio_sck
+            or old_cfg.sample_rate != new_cfg.sample_rate
+            or old_cfg.median_window != new_cfg.median_window
+            or old_cfg.scale != new_cfg.scale
+            or old_cfg.offset != new_cfg.offset
+            or old_cfg.demo_mode != new_cfg.demo_mode
+        ):
+            self.reader.close()
             self.reader = HX711Reader(
                 gpio_dout=new_cfg.gpio_dout,
                 gpio_sck=new_cfg.gpio_sck,
@@ -128,6 +144,8 @@ class AppContext:
             self.reader.offset = new_cfg.offset
             self.reader.sample_rate = new_cfg.sample_rate
             self.reader.median_window = new_cfg.median_window
+            
+        # Update MQTT client
         self.mqtt.stop()
         self.mqtt = MQTTClient(
             host=new_cfg.mqtt_host,
@@ -138,22 +156,43 @@ class AppContext:
             cmd_topic=new_cfg.cmd_topic,
         )
         self.mqtt.start()
-        save_config(self.cfg)
-        # Update display configuration
-        self.display_process.update_config({
-            "serial_port": new_cfg.serial_port,
-            "baudrate": new_cfg.baudrate,
-            "databits": new_cfg.databits,
-            "parity": new_cfg.parity,
-            "stopbits": new_cfg.stopbits,
-            "dp": new_cfg.dp,
-            "unit": new_cfg.unit,
-            "address": new_cfg.address,
-        })
         
-        # Restart display process if display was enabled or is being enabled
-        if new_cfg.display_enabled:
-            self.display_process.start()
+        # Save the configuration
+        save_config(self.cfg)
+        
+        # Handle display process updates
+        if display_settings_changed or not old_cfg.display_enabled and new_cfg.display_enabled:
+            # Stop the display process if it's running
+            if old_cfg.display_enabled:
+                self.display_process.stop()
+                
+            # Update display configuration
+            self.display_process.update_config({
+                "serial_port": new_cfg.serial_port,
+                "baudrate": new_cfg.baudrate,
+                "databits": new_cfg.databits,
+                "parity": new_cfg.parity,
+                "stopbits": new_cfg.stopbits,
+                "dp": new_cfg.dp,
+                "unit": new_cfg.unit,
+                "address": new_cfg.address,
+            })
+            
+            # Start the display process if enabled
+            if new_cfg.display_enabled:
+                self.display_process.start()
+        elif new_cfg.display_enabled and display_settings_changed:
+            # Just update the configuration without restarting the process
+            self.display_process.update_config({
+                "serial_port": new_cfg.serial_port,
+                "baudrate": new_cfg.baudrate,
+                "databits": new_cfg.databits,
+                "parity": new_cfg.parity,
+                "stopbits": new_cfg.stopbits,
+                "dp": new_cfg.dp,
+                "unit": new_cfg.unit,
+                "address": new_cfg.address,
+            })
 
     def save_config(self) -> None:
         save_config(self.cfg)

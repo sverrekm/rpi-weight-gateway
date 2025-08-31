@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { getReading, getConfig, tare, zero } from '../lib/api'
+import { getReading, getConfig, tare, zero, updateDisplayUnit } from '../lib/api'
 
 type R = { grams: number; ts: string; stable: boolean }
 
@@ -8,6 +8,7 @@ const IndexPage: React.FC = () => {
   const [status, setStatus] = useState<string>('connecting...')
   const [maxCap, setMaxCap] = useState<number>(0)
   const [unit, setUnit] = useState<'g' | 'kg'>('g')
+  const [displayUnit, setDisplayUnit] = useState<'g' | 'kg'>('g')
   const wsRef = useRef<WebSocket | null>(null)
 
   useEffect(() => {
@@ -44,6 +45,14 @@ const IndexPage: React.FC = () => {
     }
     return () => clearInterval(t)
   }, [])
+
+  // Update display unit when unit changes
+  useEffect(() => {
+    if (unit !== displayUnit) {
+      updateDisplayUnit(unit).catch(console.error)
+      setDisplayUnit(unit)
+    }
+  }, [unit])
 
   // Unit conversion and formatting
   const formatValue = (grams: number) => {
