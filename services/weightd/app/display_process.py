@@ -6,7 +6,8 @@ import os
 import signal
 import time
 import multiprocessing as mp
-from typing import Optional, Dict, Any, Tuple
+from multiprocessing.synchronize import Event as EventType
+from typing import Optional, Dict, Any, Tuple, Union
 import logging
 
 from .display_serial import DisplaySerial
@@ -74,7 +75,7 @@ class DisplayProcess:
                 logger.warning(f"Failed to send config to display process: {e}")
 
     @classmethod
-    def _run(cls, config: Dict[str, Any], queue: 'mp.Queue[Tuple[str, Any]]', stop_event: mp.synchronize.Event) -> None:
+    def _run(cls, config: Dict[str, Any], queue: 'mp.Queue[Tuple[str, Any]]', stop_event: EventType) -> None:
         """Main process loop for handling display updates."""
         # Set up process
         signal.signal(signal.SIGINT, signal.SIG_IGN)
