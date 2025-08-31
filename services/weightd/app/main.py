@@ -16,7 +16,7 @@ from .hx711 import HX711Reader
 from .mqtt_client import MQTTClient
 from .wifi_detect import has_internet, current_ip, current_ssid
 from .models import Health, WiFiInfo, Config
-from .display_serial import DisplaySerial
+from .display_process import DisplayProcess
 from . import api_routes
 
 
@@ -46,19 +46,20 @@ class AppContext:
             cmd_topic=self.cfg.cmd_topic,
         )
         self._publisher_task: Optional[asyncio.Task] = None
-        # Display
-        self.display = DisplaySerial(
-            port=self.cfg.serial_port,
-            baudrate=self.cfg.baudrate,
-            databits=self.cfg.databits,
-            parity=self.cfg.parity,
-            stopbits=self.cfg.stopbits,
-            dp=self.cfg.dp,
-            unit=self.cfg.unit,
-            address=self.cfg.address,
-        )
+        # Display process
+        self.display_process = DisplayProcess({
+            "serial_port": self.cfg.serial_port,
+            "baudrate": self.cfg.baudrate,
+            "databits": self.cfg.databits,
+            "parity": self.cfg.parity,
+            "stopbits": self.cfg.stopbits,
+            "dp": self.cfg.dp,
+            "unit": self.cfg.unit,
+            "address": self.cfg.address,
+        })
+        if self.cfg.display_enabled:
+            self.display_process.start()
         self._last_display_value: Optional[float] = None
-        self._last_display_sent: float = 0.0
 
     def _on_cmd(self, payload: dict) -> None:
         action = payload.get("action")
@@ -139,16 +140,20 @@ class AppContext:
         self.mqtt.start()
         save_config(self.cfg)
         # Update display configuration
-        self.display.update_config(
-            port=new_cfg.serial_port,
-            baudrate=new_cfg.baudrate,
-            databits=new_cfg.databits,
-            parity=new_cfg.parity,
-            stopbits=new_cfg.stopbits,
-            dp=new_cfg.dp,
-            unit=new_cfg.unit,
-            address=new_cfg.address,
-        )
+        self.display_process.update_config({
+            "serial_port": new_cfg.serial_port,
+            "baudrate": new_cfg.baudrate,
+            "databits": new_cfg.databits,
+            "parity": new_cfg.parity,
+            "stopbits": new_cfg.stopbits,
+            "dp": new_cfg.dp,
+            "unit": new_cfg.unit,
+            "address": new_cfg.address,
+        })
+        
+        # Restart display process if display was enabled or is being enabled
+        if new_cfg.display_enabled:
+            self.display_process.start()
 
     def save_config(self) -> None:
         save_config(self.cfg)
@@ -173,6 +178,7 @@ class AppContext:
                 pass
         self.reader.close()
         self.mqtt.stop()
+        self.display_process.stop()
 
     async def _publisher(self):
         status_interval = 10.0
@@ -187,11 +193,10 @@ class AppContext:
                     {"grams": grams, "ts": dt.datetime.utcnow().isoformat() + "Z", "stable": self.stable},
                     qos=0,
                 )
-            # Display updates disabled to prevent frontend freezing
-            # Use API endpoint /api/display/test for manual testing instead
-            # if self.cfg.display_enabled and self.stable:
-            #     # Automatic display updates can cause frontend to freeze
-            #     pass
+            # Update display if enabled and reading is stable
+            if self.cfg.display_enabled and self.stable and abs(grams - (self._last_display_value or 0)) >= 1.0:
+                self.display_process.update_display(grams)
+                self._last_display_value = grams
             # Status less frequently
             now = time.time()
             if now - last_status > status_interval:

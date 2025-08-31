@@ -62,7 +62,7 @@ const IndexPage: React.FC = () => {
     <div style={{ textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
       {overCap && (
         <div style={{ background: '#fee2e2', color: '#991b1b', padding: '12px 16px', border: '1px solid #fecaca', borderRadius: 8, marginBottom: 24, textAlign: 'left' }}>
-          ⚠️ Over capacity: {reading!.grams.toFixed(2)} g exceeds {maxCap} g
+          ⚠️ Over capacity: {formatValue(reading!.grams)} {unit} exceeds {unit === 'kg' ? (maxCap / 1000).toFixed(1).replace('.', ',') : maxCap} {unit}
         </div>
       )}
       
