@@ -1,4 +1,17 @@
-# Allow overriding base image for architecture compatibility (e.g., arm32v7/ or arm64v8/)
+# First stage: Build frontend
+FROM node:18-bookworm-slim AS frontend-builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy frontend files
+COPY services/webui /app
+
+# Install dependencies and build
+RUN npm install --force && \
+    npm run build
+
+# Second stage: Build backend
 ARG BASE_IMAGE=python:3.9-bookworm
 FROM ${BASE_IMAGE}
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -40,16 +53,8 @@ RUN python -m pip install --upgrade pip setuptools wheel \
 # Copy backend source
 COPY services/weightd /app
 
-# Install Node.js for building React frontend (ARM-compatible)
-RUN apt-get update && apt-get install -y nodejs npm
-
-# Copy and build React frontend
-COPY services/webui /tmp/webui
-WORKDIR /tmp/webui
-RUN npm install --force \
-    && npm run build \
-    && mkdir -p /app/app/static \
-    && cp -r dist/* /app/app/static/
+# Copy built frontend from builder stage
+COPY --from=frontend-builder /app/dist/ /app/app/static/
 
 # Copy project logo into static web root
 COPY static/IMG_4293.jpg /app/app/static/logo.jpg
