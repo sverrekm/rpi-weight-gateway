@@ -69,6 +69,9 @@ class DisplayProcess:
         """Update display configuration."""
         if self._queue and not self._stop_event.is_set():
             try:
+                # Ensure unit is always lowercase for consistency
+                if 'unit' in config:
+                    config['unit'] = config['unit'].lower()
                 self._queue.put_nowait(("config", config))
             except Exception as e:
                 logger.warning(f"Failed to send config to display process: {e}")
@@ -113,21 +116,28 @@ class DisplayProcess:
                         elif msg_type == "config":
                             # Update the current configuration
                             current_config.update(data)
+                            logger.info(f"Received config update: {current_config}")
                             if display:
-                                display.update_config(
-                                    port=current_config.get("serial_port"),
-                                    baudrate=current_config.get("baudrate", 9600),
-                                    databits=current_config.get("databits", 7),
-                                    parity=current_config.get("parity", "E"),
-                                    stopbits=current_config.get("stopbits", 1),
-                                    dp=current_config.get("dp", 2),
-                                    unit=current_config.get("unit", "kg"),
-                                    address=current_config.get("address"),
-                                )
-                                logger.info(f"Display config updated: unit={current_config.get('unit', 'kg')}")
-                                # Resend last value with new unit
-                                if last_value is not None:
-                                    display.send(last_value)
+                                try:
+                                    display.update_config(
+                                        port=current_config.get("serial_port"),
+                                        baudrate=current_config.get("baudrate", 9600),
+                                        databits=current_config.get("databits", 7),
+                                        parity=current_config.get("parity", "E"),
+                                        stopbits=current_config.get("stopbits", 1),
+                                        dp=current_config.get("dp", 2),
+                                        unit=current_config.get("unit", "kg").lower(),
+                                        address=current_config.get("address"),
+                                    )
+                                    logger.info(f"Display config updated: unit={current_config.get('unit', 'kg')}")
+                                    # Resend last value with new unit
+                                    if last_value is not None:
+                                        try:
+                                            display.send(last_value)
+                                        except Exception as e:
+                                            logger.error(f"Failed to update display with new unit: {e}")
+                                except Exception as e:
+                                    logger.error(f"Failed to update display config: {e}", exc_info=True)
                     except mp.queues.Empty:
                         pass  # No message, continue
                     

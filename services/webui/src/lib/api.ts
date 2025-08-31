@@ -59,14 +59,33 @@ export async function tare() {
   await fetch(`${base}/api/tare`, { method: 'POST' })
 }
 
-export const zero = () => fetch('/api/zero', { method: 'POST' });
+export const zero = async () => {
+  const response = await fetch('/api/zero', { 
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  return response.json();
+};
 
-export const updateDisplayUnit = (unit: string) => 
-  fetch('/api/display/unit', {
+export const updateDisplayUnit = async (unit: string) => {
+  const response = await fetch('/api/display/unit', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ unit })
   });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to update display unit');
+  }
+  
+  return response.json();
+};
 
 export interface ApStatus {
   enabled: boolean;

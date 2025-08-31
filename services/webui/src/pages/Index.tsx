@@ -195,13 +195,22 @@ const IndexPage: React.FC = () => {
   // Update display unit and save preference when unit changes
   useEffect(() => {
     if (unit !== displayUnit) {
-      Promise.all([
-        updateDisplayUnit(unit).catch(console.error),
-        updatePreferences({ unit })
-      ]).catch(console.error)
-      setDisplayUnit(unit)
+      const updateUnit = async () => {
+        try {
+          await Promise.all([
+            updateDisplayUnit(unit),
+            updatePreferences({ unit })
+          ]);
+          setDisplayUnit(unit);
+        } catch (error) {
+          console.error('Failed to update display unit:', error);
+          // Revert to previous unit on error
+          setUnit(displayUnit);
+        }
+      };
+      updateUnit();
     }
-  }, [unit])
+  }, [unit, displayUnit])
 
   // Unit conversion and formatting
   const formatValue = (grams: number) => {

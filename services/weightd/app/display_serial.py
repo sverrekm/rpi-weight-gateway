@@ -110,15 +110,35 @@ class DisplaySerial:
         address: Optional[str],
     ) -> None:
         with self._lock:
+            # Normalize unit to lowercase for consistency
+            unit = (unit or "").lower()
+            
+            # Check if we need to update the configuration
+            config_changed = (
+                self.port != port or
+                self.baudrate != baudrate or
+                self.databits != databits or
+                self.parity != parity.upper() or
+                self.stopbits != stopbits or
+                self.dp != max(0, int(dp)) or
+                self.unit != unit or
+                self.address != (address if address else None)
+            )
+            
+            if not config_changed:
+                return  # No changes needed
+                
+            # Update configuration
             self.port = port
             self.baudrate = baudrate
             self.databits = databits
             self.parity = parity.upper() if parity else "E"
             self.stopbits = stopbits
             self.dp = max(0, int(dp))
-            self.unit = unit or ""
+            self.unit = unit
             self.address = address if address else None
-            # Reopen on next send
+            
+            # Close existing connection if any
             self.close()
 
     def _format_payload(self, value: float) -> bytes:
