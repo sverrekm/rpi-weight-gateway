@@ -16,20 +16,25 @@ WORKDIR /app
 RUN echo 'Acquire::CompressionTypes::Order:: "gz";' > /etc/apt/apt.conf.d/99force-gz \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-       build-essential python3-dev git libffi-dev libssl-dev \
-       docker.io curl \
-       network-manager wireless-tools wpasupplicant \
-       # Required for multiprocessing with serial
-       python3-multiprocessing python3-setuptools \
+       build-essential \
+       python3-dev \
+       git \
+       libffi-dev \
+       libssl-dev \
+       curl \
+       network-manager \
+       wireless-tools \
+       wpasupplicant \
+       python3-setuptools \
     && rm -rf /var/lib/apt/lists/* \
-    && curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose \
+    # Install docker-compose separately to avoid conflicts
+    && curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)" -o /usr/local/bin/docker-compose \
     && chmod +x /usr/local/bin/docker-compose
 
 # Copy backend
 COPY services/weightd/requirements.txt /app/requirements.txt
 ## Upgrade pip tooling separately for clearer logs, then install deps preferring wheels
 RUN python -m pip install --upgrade pip setuptools wheel \
-    && pip debug --verbose \
     && pip install --no-cache-dir --prefer-binary -r requirements.txt
 
 # Copy backend source including static files
