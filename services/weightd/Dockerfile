@@ -15,8 +15,7 @@ RUN npm install --force --build-from-source && \
     npm run build
 
 # Second stage: Build backend
-ARG BASE_IMAGE=arm32v7/python:3.9-bookworm
-FROM ${BASE_IMAGE}
+FROM arm32v7/python:3.9-bookworm
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
