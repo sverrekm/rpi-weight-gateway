@@ -71,22 +71,36 @@ build_frontend() {
   cd "$INSTALL_DIR"
   if command -v npm >/dev/null 2>&1; then
     log "Building React frontend..."
+    
+    # Clean up any existing build
+    rm -rf "$INSTALL_DIR/services/webui/dist"
+    rm -rf "$INSTALL_DIR/services/webui/node_modules"
+    
     cd services/webui
-    npm install
+    
+    # Force clean install of dependencies
+    npm ci --force
+    
+    # Build with production settings
     npm run build
     
-    # Ensure static directory exists
+    # Ensure static directory exists and is clean
+    rm -rf "$INSTALL_DIR/services/weightd/app/static"
     mkdir -p "$INSTALL_DIR/services/weightd/app/static"
     
     # Copy built files to static directory
     log "Copying frontend files to static directory..."
     cp -r dist/* "$INSTALL_DIR/services/weightd/app/static/"
     
-    # Fix permissions
+    # Set correct permissions
     chown -R $(id -u):$(id -g) "$INSTALL_DIR/services/weightd/app/static"
     
+    # Verify files were copied
+    log "Verifying files in static directory:"
+    ls -la "$INSTALL_DIR/services/weightd/app/static/"
+    
     cd "$INSTALL_DIR"
-    log "Frontend build and deployment complete"
+    log "Frontend build and deployment complete at $(date)"
   else
     log "npm not found, skipping frontend build (using committed dist/ files)"
   fi
