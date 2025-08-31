@@ -1,4 +1,8 @@
 export type Reading = { grams: number; ts: string; stable: boolean }
+export type UserPreferences = {
+  unit: 'g' | 'kg'
+}
+
 export type Config = {
   mqtt_host?: string | null
   mqtt_port: number
@@ -63,6 +67,32 @@ export const updateDisplayUnit = (unit: string) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ unit })
   });
+
+export interface ApStatus {
+  enabled: boolean;
+  ssid?: string;
+  ip_address?: string;
+  status?: string;
+  error?: string;
+}
+
+export const getApStatus = (): Promise<ApStatus> =>
+  fetch('/api/wifi/ap/status').then(r => r.json())
+
+export const setApMode = (enabled: boolean): Promise<{ status: string }> =>
+  fetch(`/api/wifi/ap/${enabled ? 'enable' : 'disable'}`, {
+    method: 'POST'
+  }).then(r => r.json())
+
+export const getPreferences = (): Promise<UserPreferences> =>
+  fetch('/api/preferences').then(r => r.json())
+
+export const updatePreferences = (prefs: UserPreferences) =>
+  fetch('/api/preferences', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(prefs)
+  }).then(r => r.json())
 
 export async function calibrate(known_grams: number) {
   const r = await fetch(`${base}/api/calibrate`, {

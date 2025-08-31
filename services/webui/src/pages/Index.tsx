@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { getReading, getConfig, tare, zero, updateDisplayUnit } from '../lib/api'
+import { getReading, getConfig, tare, zero, updateDisplayUnit, getPreferences, updatePreferences } from '../lib/api'
 
 type R = { grams: number; ts: string; stable: boolean }
 
@@ -12,12 +12,21 @@ const IndexPage: React.FC = () => {
   const wsRef = useRef<WebSocket | null>(null)
 
   useEffect(() => {
-    // Load configuration for max capacity
+    // Load configuration for max capacity and user preferences
     (async () => {
       try {
-        const cfg = await getConfig()
+        const [cfg, prefs] = await Promise.all([
+          getConfig(),
+          getPreferences().catch(() => ({ unit: 'g' }))
+        ])
         setMaxCap(cfg.max_capacity_g || 0)
-      } catch {}
+        // Ensure the unit is either 'g' or 'kg'
+        const validUnit = prefs.unit === 'kg' ? 'kg' : 'g'
+        setUnit(validUnit)
+        setDisplayUnit(validUnit)
+      } catch (e) {
+        console.error('Failed to load config or preferences:', e)
+      }
     })()
 
     const wsUrl = (() => {
@@ -46,10 +55,13 @@ const IndexPage: React.FC = () => {
     return () => clearInterval(t)
   }, [])
 
-  // Update display unit when unit changes
+  // Update display unit and save preference when unit changes
   useEffect(() => {
     if (unit !== displayUnit) {
-      updateDisplayUnit(unit).catch(console.error)
+      Promise.all([
+        updateDisplayUnit(unit).catch(console.error),
+        updatePreferences({ unit })
+      ]).catch(console.error)
       setDisplayUnit(unit)
     }
   }, [unit])

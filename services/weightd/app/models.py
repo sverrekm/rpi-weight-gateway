@@ -53,6 +53,10 @@ class Config(BaseModel):
 class CalibrateRequest(BaseModel):
     known_grams: float
 
+class UserPreferences(BaseModel):
+    unit: str = "kg"
+    # Add more user preferences here in the future
+
 class DisplayConfigPayload(BaseModel):
     display_enabled: bool
     serial_port: Optional[str] = None

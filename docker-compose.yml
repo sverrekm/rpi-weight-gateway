@@ -15,16 +15,25 @@ services:
       - NET_RAW
       - SYS_ADMIN
       - SYS_NICE
+      - SYS_MODULE  # Required for WiFi modules
+      - SYS_RAWIO   # Required for GPIO access
     devices:
       - "/dev/net/tun:/dev/net/tun"
       - "/dev/ttyACM0:/dev/ttyACM0"
       - "/dev/ttyUSB0:/dev/ttyUSB0"
+      - "/dev/vchiq:/dev/vchiq"  # For RPi GPU
     volumes:
       - /var/run/dbus:/var/run/dbus
       - /run/NetworkManager:/run/NetworkManager
       - /etc/NetworkManager:/etc/NetworkManager
       - /var/lib/NetworkManager:/var/lib/NetworkManager
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/data  # For persisting user preferences
+      - /etc/hostapd:/etc/hostapd
+      - /etc/dnsmasq.conf:/etc/dnsmasq.conf
+      - /var/run/hostapd:/var/run/hostapd
+      - /var/lib/misc:/var/lib/misc
+      - /etc/iptables:/etc/iptables
     environment:
       - VERSION=0.1.0
       - MQTT_HOST=${MQTT_HOST}

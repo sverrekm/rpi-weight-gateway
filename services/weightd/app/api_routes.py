@@ -8,9 +8,13 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from typing import List, Callable, Optional, Dict, Any, Tuple
 
-from .models import Reading, CalibrateRequest, Config, Health, WiFiInfo
+import json
+from pathlib import Path
+from .models import Reading, CalibrateRequest, Config, Health, WiFiInfo, UserPreferences
 from .config import save_config as persist_config
 from . import wifi_detect
+import subprocess
+import logging
 
 
 class WeightHub:
@@ -40,6 +44,19 @@ class WeightHub:
 
 def create_router(ctx) -> APIRouter:
     router = APIRouter()
+    PREFS_FILE = Path("/data/user_prefs.json")
+
+    def load_prefs() -> UserPreferences:
+        try:
+            if PREFS_FILE.exists():
+                return UserPreferences(**json.loads(PREFS_FILE.read_text()))
+        except Exception:
+            pass
+        return UserPreferences()
+
+    def save_prefs(prefs: UserPreferences):
+        PREFS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        PREFS_FILE.write_text(json.dumps(prefs.dict()))
 
     hub = WeightHub(lambda: ctx.read_grams(), lambda: ctx.stable)
     BROKER_CONF_PATH = Path(os.getenv("BROKER_CONF_PATH", "/data/mosquitto.conf"))
@@ -513,4 +530,310 @@ persistence_location /mosquitto/data/
         return JSONResponse({"error": "no supported wifi tools (nmcli/wpa_cli) available"}, status_code=501)
 
     ctx._ws_hub = hub
+    @router.get("/api/preferences")
+    async def get_preferences():
+        """Get user preferences."""
+        return load_prefs()
+
+    @router.post("/api/preferences")
+    async def update_preferences(prefs: UserPreferences):
+        """Update user preferences."""
+        save_prefs(prefs)
+        return {"status": "ok"}
+
+    @router.get("/api/wifi/ap/status")
+    async def get_ap_status():
+        """Get the current status of the WiFi access point"""
+        try:
+            # Check if hostapd is running
+            hostapd_result = subprocess.run(
+                ["systemctl", "is-active", "hostapd"],
+                capture_output=True,
+                text=True
+            )
+            hostapd_active = hostapd_result.returncode == 0
+            
+            # Check if dnsmasq is running
+            dnsmasq_result = subprocess.run(
+                ["systemctl", "is-active", "dnsmasq"],
+                capture_output=True,
+                text=True
+            )
+            dnsmasq_active = dnsmasq_result.returncode == 0
+            
+            # Check if wlan0 is up
+            wlan0_up = False
+            ip_result = subprocess.run(
+                ["ip", "addr", "show", "wlan0", "up"],
+                capture_output=True,
+                text=True
+            )
+            if ip_result.returncode == 0:
+                wlan0_up = "state UP" in ip_result.stdout
+            
+            # Get SSID from config if available
+            ssid = os.getenv("WIFI_AP_SSID", "rpi-weight-gateway")
+            ip_address = "192.168.4.1"  # Default AP IP
+            
+            # Try to get SSID and channel from config file
+            channel = 7  # Default channel
+            try:
+                if os.path.exists("/etc/hostapd/hostapd.conf"):
+                    with open("/etc/hostapd/hostapd.conf", "r") as f:
+                        for line in f:
+                            line = line.strip()
+                            if not line or line.startswith("#"):
+                                continue
+                            if line.startswith("ssid=") and not line.startswith("#"):
+                                ssid = line.split("=", 1)[1].strip()
+                            elif line.startswith("channel=") and not line.startswith("#"):
+                                try:
+                                    channel = int(line.split("=", 1)[1].strip())
+                                except (ValueError, IndexError):
+                                    pass
+            except Exception as e:
+                logger.warning(f"Error reading hostapd config: {str(e)}")
+            
+            # Get current IP of wlan0 if available
+            try:
+                ip_result = subprocess.run(
+                    ["ip", "addr", "show", "wlan0"],
+                    capture_output=True,
+                    text=True
+                )
+                if ip_result.returncode == 0:
+                    import re
+                    ip_match = re.search(r'inet (\d+\.\d+\.\d+\.\d+)', ip_result.stdout)
+                    if ip_match:
+                        ip_address = ip_match.group(1)
+            except Exception as e:
+                logger.warning(f"Error getting wlan0 IP: {str(e)}")
+            
+            # Check if AP is actually broadcasting
+            ap_broadcasting = hostapd_active and dnsmasq_active and wlan0_up
+            
+            # Determine overall status
+            if ap_broadcasting:
+                status = "active"
+            elif hostapd_active or dnsmasq_active:
+                status = "partially_active"
+            else:
+                status = "inactive"
+            
+            return {
+                "enabled": ap_broadcasting,
+                "ssid": ssid,
+                "ip_address": ip_address,
+                "channel": channel,
+                "status": status,
+                "services": {
+                    "hostapd": {
+                        "active": hostapd_active,
+                        "status": "running" if hostapd_active else "stopped"
+                    },
+                    "dnsmasq": {
+                        "active": dnsmasq_active,
+                        "status": "running" if dnsmasq_active else "stopped"
+                    },
+                    "wlan0": {
+                        "up": wlan0_up,
+                        "status": "up" if wlan0_up else "down"
+                    }
+                },
+                "last_updated": dt.datetime.utcnow().isoformat() + "Z"
+            }
+            
+        except Exception as e:
+            error_msg = f"Failed to get AP status: {str(e)}"
+            logger.error(error_msg)
+            raise HTTPException(
+                status_code=500,
+                detail=error_msg
+            )
+
+    @router.post("/api/wifi/ap/enable")
+    async def enable_ap():
+        """Enable the WiFi access point"""
+        try:
+            logger.info("Enabling WiFi access point...")
+            
+            # Ensure network interfaces are up
+            try:
+                subprocess.run(
+                    ["ip", "link", "set", "wlan0", "up"], 
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Failed to bring up wlan0: {e.stderr}")
+                return {
+                    "enabled": False,
+                    "status": "error",
+                    "error": f"Failed to bring up WiFi interface: {e.stderr}"
+                }
+            
+            # Ensure hostapd and dnsmasq are stopped before starting
+            for service in ["hostapd", "dnsmasq"]:
+                try:
+                    subprocess.run(
+                        ["systemctl", "stop", service],
+                        check=False,
+                        capture_output=True,
+                        text=True
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not stop {service}: {str(e)}")
+            
+            # Run the setup script to ensure proper configuration
+            try:
+                setup_result = subprocess.run(
+                    ["/usr/local/bin/setup_ap.sh"],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                logger.debug(f"AP setup output: {setup_result.stdout}")
+            except subprocess.CalledProcessError as e:
+                error_msg = f"Failed to configure AP: {e.stderr}"
+                logger.error(error_msg)
+                return {
+                    "enabled": False,
+                    "status": "error",
+                    "error": f"Access point configuration failed: {e.stderr}"
+                }
+            
+            # Start required services in order
+            services = ["dnsmasq", "hostapd"]
+            for service in services:
+                try:
+                    # Enable and start the service
+                    subprocess.run(
+                        ["systemctl", "enable", "--now", service],
+                        check=True,
+                        capture_output=True,
+                        text=True
+                    )
+                    logger.info(f"Started and enabled {service} service")
+                except subprocess.CalledProcessError as e:
+                    error_msg = f"Failed to start {service}: {e.stderr}"
+                    logger.error(error_msg)
+                    return {
+                        "enabled": False,
+                        "status": "error",
+                        "error": error_msg
+                    }
+            
+            # Verify services are running
+            time.sleep(2)  # Give services time to start
+            
+            for service in services:
+                result = subprocess.run(
+                    ["systemctl", "is-active", service],
+                    capture_output=True,
+                    text=True
+                )
+                if result.returncode != 0:
+                    error_msg = f"Service {service} failed to start: {result.stderr}"
+                    logger.error(error_msg)
+                    return {
+                        "enabled": False,
+                        "status": "error",
+                        "error": error_msg
+                    }
+            
+            logger.info("WiFi access point enabled successfully")
+            
+            # Get updated status
+            status = await get_ap_status()
+            return status
+            
+        except Exception as e:
+            error_msg = f"Failed to enable access point: {str(e)}"
+            logger.error(error_msg)
+            raise HTTPException(
+                status_code=500,
+                detail=error_msg
+            )
+
+    @router.post("/api/wifi/ap/disable")
+    async def disable_ap():
+        """Disable the WiFi access point"""
+        try:
+            logger.info("Disabling WiFi access point...")
+            
+            # Stop and disable services in reverse order
+            services = ["hostapd", "dnsmasq"]
+            for service in services:
+                try:
+                    # Stop the service
+                    subprocess.run(
+                        ["systemctl", "stop", service], 
+                        check=False,  # Don't fail if already stopped
+                        capture_output=True,
+                        text=True
+                    )
+                    # Disable from starting on boot
+                    subprocess.run(
+                        ["systemctl", "disable", service], 
+                        check=False,  # Don't fail if already disabled
+                        capture_output=True,
+                        text=True
+                    )
+                    logger.info(f"Stopped and disabled {service} service")
+                except Exception as e:
+                    logger.warning(f"Error managing {service}: {str(e)}")
+            
+            # Flush iptables rules to clean up NAT and forwarding
+            try:
+                cmds = [
+                    ["iptables", "-t", "nat", "-D", "POSTROUTING", "-o", "eth0", "-j", "MASQUERADE"],
+                    ["iptables", "-D", "FORWARD", "-i", "eth0", "-o", "wlan0", "-m", "state", "--state", "RELATED,ESTABLISHED", "-j", "ACCEPT"],
+                    ["iptables", "-D", "FORWARD", "-i", "wlan0", "-o", "eth0", "-j", "ACCEPT"]
+                ]
+                for cmd in cmds:
+                    result = subprocess.run(
+                        cmd,
+                        check=False,  # Don't fail if rules don't exist
+                        capture_output=True,
+                        text=True
+                    )
+                    if result.returncode != 0 and "No chain/target/match" not in result.stderr:
+                        logger.warning(f"Failed to remove iptables rule: {result.stderr}")
+                
+                # Also flush the FORWARD chain
+                subprocess.run(
+                    ["iptables", "-F", "FORWARD"],
+                    check=False,
+                    capture_output=True
+                )
+                
+                logger.info("Cleaned up iptables rules")
+            except Exception as e:
+                logger.warning(f"Error cleaning up iptables: {str(e)}")
+            
+            # Ensure wlan0 is down
+            try:
+                subprocess.run(
+                    ["ip", "link", "set", "wlan0", "down"],
+                    check=False,
+                    capture_output=True
+                )
+            except Exception as e:
+                logger.warning(f"Could not bring down wlan0: {str(e)}")
+            
+            logger.info("WiFi access point disabled successfully")
+            
+            # Get updated status
+            status = await get_ap_status()
+            return status
+            
+        except Exception as e:
+            error_msg = f"Failed to disable access point: {str(e)}"
+            logger.error(error_msg)
+            raise HTTPException(
+                status_code=500,
+                detail=error_msg
+            )
+
     return router
