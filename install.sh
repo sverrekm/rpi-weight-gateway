@@ -88,24 +88,24 @@ build_frontend() {
   if command -v npm >/dev/null 2>&1; then
     log "Building React frontend..."
     
+    # Navigate to webui directory
+    cd "$INSTALL_DIR/services/webui"
+    
     # Clean up any existing build
+    log "Cleaning previous build..."
     rm -rf "$INSTALL_DIR/services/webui/dist"
     rm -rf "$INSTALL_DIR/services/webui/node_modules"
-    cd services/webui
     
-    # Clean up any existing build artifacts
-    log "Cleaning up old build artifacts..."
-    rm -rf node_modules/
-    rm -rf dist/
-    
-    # Install dependencies
-    log "Installing frontend dependencies..."
+    # Install dependencies with force to resolve any conflicts
+    log "Installing dependencies..."
     npm install --force
     
     # Build the frontend
     log "Building frontend..."
     npm run build
     
+    # Verify the build was successful
+    if [ ! -d "$INSTALL_DIR/services/webui/dist" ]; then
     # The postbuild script will handle copying files
     
     # Verify files were built
