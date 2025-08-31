@@ -6,7 +6,7 @@ import os
 import signal
 import time
 import multiprocessing as mp
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 import logging
 
 from .display_serial import DisplaySerial
@@ -71,10 +71,10 @@ class DisplayProcess:
             try:
                 self._queue.put_nowait(("config", config))
             except Exception as e:
-                logger.warning(f"Failed to send config to display process: {e}"
+                logger.warning(f"Failed to send config to display process: {e}")
 
     @classmethod
-    def _run(cls, config: Dict[str, Any], queue: mp.Queue, stop_event: mp.Event) -> None:
+    def _run(cls, config: Dict[str, Any], queue: 'mp.Queue[Tuple[str, Any]]', stop_event: mp.synchronize.Event) -> None:
         """Main process loop for handling display updates."""
         # Set up process
         signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -103,7 +103,8 @@ class DisplayProcess:
                 try:
                     # Process messages with timeout to allow checking stop_event
                     try:
-                        msg_type, data = queue.get(timeout=0.1)
+                        msg: Tuple[str, Any] = queue.get(timeout=0.1)
+                        msg_type, data = msg
                         if msg_type == "weight":
                             last_value = data
                         elif msg_type == "config":
@@ -133,6 +134,8 @@ class DisplayProcess:
                             except:
                                 pass
                 
+                except mp.queues.Empty:
+                    pass  # No message, continue
                 except Exception as e:
                     logger.error(f"Error in display process: {e}", exc_info=True)
                     time.sleep(1)  # Prevent tight loop on errors
@@ -143,6 +146,6 @@ class DisplayProcess:
             if display:
                 try:
                     display.close()
-                except:
+                except Exception:
                     pass
             logger.info("Display process exiting")
