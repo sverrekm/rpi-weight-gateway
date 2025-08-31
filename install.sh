@@ -74,8 +74,19 @@ build_frontend() {
     cd services/webui
     npm install
     npm run build
-    cd ../..
-    log "Frontend build complete"
+    
+    # Ensure static directory exists
+    mkdir -p "$INSTALL_DIR/services/weightd/app/static"
+    
+    # Copy built files to static directory
+    log "Copying frontend files to static directory..."
+    cp -r dist/* "$INSTALL_DIR/services/weightd/app/static/"
+    
+    # Fix permissions
+    chown -R $(id -u):$(id -g) "$INSTALL_DIR/services/weightd/app/static"
+    
+    cd "$INSTALL_DIR"
+    log "Frontend build and deployment complete"
   else
     log "npm not found, skipping frontend build (using committed dist/ files)"
   fi
