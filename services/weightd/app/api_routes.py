@@ -3,6 +3,7 @@ import asyncio
 import datetime as dt
 import os
 import socket
+import time
 from pathlib import Path
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
@@ -24,22 +25,41 @@ class WeightHub:
         self.active: List[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active.append(websocket)
+        try:
+            await websocket.accept()
+            self.active.append(websocket)
+            logger.info(f"WebSocket connection accepted. Active connections: {len(self.active)}")
+        except Exception as e:
+            logger.error(f"Error accepting WebSocket connection: {str(e)}")
+            raise
 
     def disconnect(self, websocket: WebSocket):
-        if websocket in self.active:
-            self.active.remove(websocket)
+        try:
+            if websocket in self.active:
+                self.active.remove(websocket)
+                logger.info(f"WebSocket disconnected. Active connections: {len(self.active)}")
+        except Exception as e:
+            logger.error(f"Error during WebSocket disconnect: {str(e)}")
 
     async def broadcast(self, reading: Reading):
+        if not self.active:
+            return
+            
         dead = []
+        data = reading.dict()
+        
         for ws in self.active:
             try:
-                await ws.send_json(reading.dict())
-            except Exception:
+                await ws.send_json(data)
+            except Exception as e:
+                logger.warning(f"WebSocket send error: {str(e)}")
                 dead.append(ws)
+                
         for ws in dead:
-            self.disconnect(ws)
+            try:
+                self.disconnect(ws)
+            except Exception as e:
+                logger.error(f"Error cleaning up dead WebSocket: {str(e)}")
 
 
 def create_router(ctx) -> APIRouter:
@@ -317,15 +337,98 @@ persistence_location /mosquitto/data/
 
     @router.websocket("/ws/weight")
     async def ws_weight(websocket: WebSocket):
-        await hub.connect(websocket)
+        client_ip = websocket.client.host if websocket.client else 'unknown'
+        logger.info(f"WebSocket connection attempt from {client_ip}")
+        
         try:
+            await websocket.accept()
+            logger.info(f"WebSocket accepted from {client_ip}")
+            await hub.connect(websocket)
+            logger.info(f"WebSocket connected: {client_ip}")
+            
+            # Initial handshake with client
+            try:
+                await websocket.send_json({"type": "handshake", "status": "connected", "timestamp": dt.datetime.utcnow().isoformat() + "Z"})
+            except Exception as e:
+                logger.error(f"Error during WebSocket handshake with {client_ip}: {str(e)}")
+                raise
+            
+            last_error_time = 0
+            error_count = 0
+            
             while True:
-                await asyncio.sleep(max(0.05, 1.0 / max(1, ctx.cfg.sample_rate)))
-                grams = ctx.read_grams()
-                reading = Reading(grams=grams, ts=dt.datetime.utcnow().isoformat() + "Z", stable=ctx.stable)
-                await hub.broadcast(reading)
-        except WebSocketDisconnect:
+                try:
+                    # Check for client pings or other control messages (with timeout)
+                    try:
+                        data = await asyncio.wait_for(websocket.receive_text(), timeout=0.1)
+                        if data == "ping":
+                            await websocket.send_text("pong")
+                        continue
+                    except asyncio.TimeoutError:
+                        pass
+                    except Exception as e:
+                        logger.warning(f"Error in WebSocket receive for {client_ip}: {str(e)}")
+                        error_count += 1
+                        if error_count > 10:  # Too many errors, disconnect
+                            logger.error(f"Too many errors ({error_count}) from {client_ip}, disconnecting")
+                            break
+                        await asyncio.sleep(1)
+                        continue
+                    
+                    # Reset error count on successful operation
+                    error_count = 0
+                    
+                    # Add a small delay to prevent high CPU usage
+                    await asyncio.sleep(max(0.05, 1.0 / max(1, ctx.cfg.sample_rate)))
+                    
+                    # Read weight data
+                    try:
+                        grams = ctx.read_grams()
+                        reading = Reading(
+                            grams=grams,
+                            ts=dt.datetime.utcnow().isoformat() + "Z",
+                            stable=ctx.stable
+                        )
+                        
+                        # Send to this client only
+                        await websocket.send_json(reading.dict())
+                        
+                    except Exception as e:
+                        current_time = time.time()
+                        if current_time - last_error_time > 60:  # Log same error at most once per minute
+                            logger.error(f"Error reading weight data for {client_ip}: {str(e)}")
+                            last_error_time = current_time
+                        await asyncio.sleep(1)  # Prevent tight error loop
+                        
+                except asyncio.CancelledError:
+                    logger.info(f"WebSocket connection cancelled: {client_ip}")
+                    break
+                    
+                except WebSocketDisconnect:
+                    logger.info(f"WebSocket client disconnected: {client_ip}")
+                    break
+                    
+                except Exception as e:
+                    current_time = time.time()
+                    if current_time - last_error_time > 60:  # Log same error at most once per minute
+                        logger.error(f"Error in WebSocket loop for {client_ip}: {str(e)}")
+                        last_error_time = current_time
+                    await asyncio.sleep(1)  # Prevent tight error loop
+                    
+        except Exception as e:
+            current_time = time.time()
+            if current_time - last_error_time > 60:  # Log same error at most once per minute
+                logger.error(f"WebSocket error with {client_ip}: {str(e)}", exc_info=True)
+                last_error_time = current_time
+                
+        finally:
+            try:
+                await websocket.close()
+            except:
+                pass
             hub.disconnect(websocket)
+            logger.info(f"WebSocket connection closed: {client_ip}")
+            
 
     @router.post("/api/display/test")
     async def display_test(payload: dict):

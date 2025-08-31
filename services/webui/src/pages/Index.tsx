@@ -9,40 +9,177 @@ const IndexPage: React.FC = () => {
   const [maxCap, setMaxCap] = useState<number>(0)
   const [unit, setUnit] = useState<'g' | 'kg'>('g')
   const [displayUnit, setDisplayUnit] = useState<'g' | 'kg'>('g')
-  const wsRef = useRef<WebSocket | null>(null)
+  const reconnectTimeoutRef = useRef<number | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const MAX_RECONNECT_ATTEMPTS = 10;
 
-  useEffect(() => {
-    // Load configuration for max capacity and user preferences
-    (async () => {
+  const connectWebSocket = () => {
+    // Clear any existing reconnection timeout
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    // Close existing WebSocket if any
+    if (wsRef.current) {
       try {
-        const [cfg, prefs] = await Promise.all([
-          getConfig(),
-          getPreferences().catch(() => ({ unit: 'g' }))
-        ])
-        setMaxCap(cfg.max_capacity_g || 0)
-        // Ensure the unit is either 'g' or 'kg'
-        const validUnit = prefs.unit === 'kg' ? 'kg' : 'g'
-        setUnit(validUnit)
-        setDisplayUnit(validUnit)
+        wsRef.current.onclose = null; // Remove handler to prevent reconnection
+        wsRef.current.close();
       } catch (e) {
-        console.error('Failed to load config or preferences:', e)
+        console.error('Error closing existing WebSocket:', e);
       }
-    })()
+      wsRef.current = null;
+    }
 
     const wsUrl = (() => {
-      const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-      return `${proto}://${location.host}/ws/weight`
-    })()
-    const ws = new WebSocket(wsUrl)
-    wsRef.current = ws
-    ws.onopen = () => setStatus('live')
-    ws.onclose = () => setStatus('disconnected')
+      // Use REACT_APP_WS_HOST from environment if available, otherwise use current host
+      const host = (window as any).REACT_APP_WS_HOST || window.location.host;
+      // Default to wss if on HTTPS, otherwise use ws
+      const isSecure = window.location.protocol === 'https:';
+      const proto = isSecure ? 'wss' : 'ws';
+      // Ensure we don't have double slashes in the URL
+      const cleanHost = host.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      return `${proto}://${cleanHost}/ws/weight`;
+    })();
+
+    console.log('Connecting to WebSocket:', wsUrl);
+    const ws = new WebSocket(wsUrl);
+    
+    let pingInterval: number | null = null;
+    let lastPongTime = Date.now();
+    const PING_INTERVAL = 30000; // 30 seconds
+    const PONG_TIMEOUT = 10000;  // 10 seconds
+    
+    ws.onopen = () => {
+      console.log('WebSocket connected');
+      setStatus('live');
+      reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
+      lastPongTime = Date.now();
+      
+      // Start ping-pong
+      pingInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          try {
+            ws.send('ping');
+            
+            // Check if we got a pong recently
+            if (Date.now() - lastPongTime > PONG_TIMEOUT) {
+              console.warn('No pong received, reconnecting...');
+              ws.close(); // This will trigger onclose and reconnect
+            }
+          } catch (e) {
+            console.error('Error sending ping:', e);
+            ws.close();
+          }
+        }
+      }, PING_INTERVAL);
+    };
+    
+    ws.onclose = (event) => {
+      console.log('WebSocket closed:', event.code, event.reason);
+      setStatus('disconnected');
+      
+      // Clean up ping interval
+      if (pingInterval !== null) {
+        window.clearInterval(pingInterval);
+        pingInterval = null;
+      }
+      
+      if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+        console.error('Max reconnection attempts reached');
+        return;
+      }
+      
+      // Exponential backoff with jitter
+      const baseDelay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+      const jitter = Math.random() * 1000; // Add up to 1s jitter
+      const delay = Math.min(baseDelay + jitter, 30000); // Max 30s delay
+      
+      reconnectAttemptsRef.current++;
+      console.log(`Reconnecting (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS}) in ${Math.round(delay)}ms...`);
+      
+      // Clear any existing timeout first
+      if (reconnectTimeoutRef.current !== null) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      
+      reconnectTimeoutRef.current = window.setTimeout(() => {
+        connectWebSocket();
+      }, delay) as unknown as number; // Type assertion for browser environment
+    };
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      // The close handler will be called after an error
+    };
+    
     ws.onmessage = (ev) => {
-      const data = JSON.parse(ev.data) as R
-      setReading(data)
-    }
-    return () => ws.close()
-  }, [])
+      try {
+        // Handle pong messages
+        if (ev.data === 'pong') {
+          lastPongTime = Date.now();
+          return;
+        }
+        
+        // Handle handshake
+        if (typeof ev.data === 'string') {
+          try {
+            const message = JSON.parse(ev.data);
+            if (message.type === 'handshake' && message.status === 'connected') {
+              console.log('WebSocket handshake successful');
+              return;
+            }
+          } catch (e) {
+            // Not a JSON message, continue to normal processing
+          }
+        }
+        
+        // Handle weight data
+        const data = JSON.parse(ev.data) as R;
+        setReading(data);
+      } catch (e) {
+        console.error('Error processing WebSocket message:', e);
+      }
+    };
+    
+    wsRef.current = ws;
+  };
+
+  useEffect(() => {
+    // Load initial data
+    (async () => {
+      try {
+        setReading(await getReading());
+        const prefs = await getPreferences();
+        // Ensure the unit is either 'g' or 'kg'
+        const validUnit = prefs.unit === 'kg' ? 'kg' : 'g';
+        setUnit(validUnit);
+        setDisplayUnit(validUnit);
+      } catch (e) {
+        console.error('Failed to load config or preferences:', e);
+      }
+    })();
+
+    // Setup WebSocket connection
+    connectWebSocket();
+    
+    // Cleanup function
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.onclose = null; // Disable onclose handler to prevent reconnection
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      
+      if (reconnectTimeoutRef.current !== null) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      
+      reconnectAttemptsRef.current = 0; // Reset reconnection attempts
+    };
+  }, []);
 
   useEffect(() => {
     // Fallback poll if WS not working

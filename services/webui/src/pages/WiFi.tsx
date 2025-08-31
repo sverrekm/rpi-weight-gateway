@@ -343,19 +343,22 @@ const WiFiPage: React.FC = () => {
               )}
             </select>
             
-            <input 
-              type="password" 
-              value={psk} 
-              onChange={e => setPsk(e.target.value)} 
-              placeholder="Password (if required)" 
-              style={{
-                padding: '8px 12px',
-                borderRadius: '4px',
-                border: '1px solid #d1d5db',
-                flex: '1 1 200px',
-                maxWidth: '100%'
-              }}
-            />
+            <form onSubmit={(e) => { e.preventDefault(); }}>
+              <input 
+                type="password" 
+                value={psk} 
+                onChange={e => setPsk(e.target.value)} 
+                placeholder="Password (if required)" 
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '4px',
+                  border: '1px solid #d1d5db',
+                  flex: '1 1 200px',
+                  maxWidth: '100%',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </form>
             
             <div style={{ display: 'flex', gap: '8px' }}>
               <button 

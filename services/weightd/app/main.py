@@ -248,13 +248,16 @@ class AppContext:
 ctx = AppContext()
 app = FastAPI(title="rpi-weight-gateway")
 
-# CORS for local usage
+# CORS configuration for both HTTP and WebSocket connections
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # In production, replace with specific origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],  # Important for WebSocket connections
+    allow_origin_regex=r"https?://.*",  # Allow all HTTP/HTTPS origins
+    allow_websocket_origin=["*"],  # Explicitly allow WebSocket connections from any origin
 )
 
 # API routes FIRST - must be before static file mounting
