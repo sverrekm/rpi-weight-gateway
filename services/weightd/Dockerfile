@@ -37,12 +37,27 @@ COPY services/weightd/requirements.txt /app/requirements.txt
 RUN python -m pip install --upgrade pip setuptools wheel \
     && pip install --no-cache-dir --prefer-binary -r requirements.txt
 
-# Copy backend source including static files
+# Copy backend source
 COPY services/weightd /app
+
+# Install Node.js for building React frontend
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs
+
+# Copy and build React frontend
+COPY services/webui /tmp/webui
+WORKDIR /tmp/webui
+RUN npm install --force \
+    && npm run build \
+    && mkdir -p /app/app/static \
+    && cp -r dist/* /app/app/static/
 
 # Copy project logo into static web root
 COPY static/IMG_4293.jpg /app/app/static/logo.jpg
 COPY static/IMG_4293.jpg /app/app/static/logo.png
+
+# Return to app directory
+WORKDIR /app
 
 # Create data dir and ensure proper permissions
 RUN mkdir -p /data \
