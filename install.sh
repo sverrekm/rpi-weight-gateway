@@ -75,34 +75,34 @@ build_frontend() {
     # Clean up any existing build
     rm -rf "$INSTALL_DIR/services/webui/dist"
     rm -rf "$INSTALL_DIR/services/webui/node_modules"
-    
     cd services/webui
     
-    # Force clean install of dependencies
-    npm ci --force
+    # Clean up any existing build artifacts
+    log "Cleaning up old build artifacts..."
+    rm -rf node_modules/
+    rm -rf dist/
     
-    # Build with production settings
+    # Install dependencies
+    log "Installing frontend dependencies..."
+    npm install --force
+    
+    # Build the frontend
+    log "Building frontend..."
     npm run build
     
-    # Ensure static directory exists and is clean
-    rm -rf "$INSTALL_DIR/services/weightd/app/static"
-    mkdir -p "$INSTALL_DIR/services/weightd/app/static"
+    # The postbuild script will handle copying files
     
-    # Copy built files to static directory
-    log "Copying frontend files to static directory..."
-    cp -r dist/* "$INSTALL_DIR/services/weightd/app/static/"
+    # Verify files were built
+    if [ ! -d "dist" ]; then
+      log "Error: Frontend build failed - dist directory not found"
+      exit 1
+    fi
     
-    # Set correct permissions
-    chown -R $(id -u):$(id -g) "$INSTALL_DIR/services/weightd/app/static"
-    
-    # Verify files were copied
-    log "Verifying files in static directory:"
-    ls -la "$INSTALL_DIR/services/weightd/app/static/"
-    
+    log "Frontend build complete"
     cd "$INSTALL_DIR"
-    log "Frontend build and deployment complete at $(date)"
   else
-    log "npm not found, skipping frontend build (using committed dist/ files)"
+    log "npm not found, skipping frontend build"
+    exit 1
   fi
 }
 
