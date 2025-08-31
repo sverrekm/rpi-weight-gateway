@@ -1,5 +1,5 @@
 # First stage: Build frontend - use explicit ARMv7 image
-FROM node:18-bullseye-slim AS frontend-builder
+FROM --platform=linux/arm/v7 node:18-bullseye-slim AS frontend-builder
 
 # Set working directory
 WORKDIR /app
@@ -15,7 +15,7 @@ RUN npm install --force --build-from-source && \
     npm run build
 
 # Second stage: Build backend
-ARG BASE_IMAGE=python:3.9-bookworm
+ARG BASE_IMAGE=arm32v7/python:3.9-bookworm
 FROM ${BASE_IMAGE}
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
