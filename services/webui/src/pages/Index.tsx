@@ -68,55 +68,94 @@ const IndexPage: React.FC = () => {
   const overCap = !!reading && maxCap > 0 && reading.grams > maxCap
 
   return (
-    <div style={{ textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
+    <div style={{ maxWidth: 800, margin: '0 auto', padding: '20px' }}>
       {overCap && (
-        <div style={{ background: '#fee2e2', color: '#991b1b', padding: '12px 16px', border: '1px solid #fecaca', borderRadius: 8, marginBottom: 24, textAlign: 'left' }}>
+        <div style={{ 
+          background: '#fee2e2', 
+          color: '#991b1b', 
+          padding: '12px 16px', 
+          border: '1px solid #fecaca', 
+          borderRadius: 8, 
+          marginBottom: 24, 
+          textAlign: 'left' 
+        }}>
           ⚠️ Over capacity: {formatValue(reading!.grams)} {unit} exceeds {unit === 'kg' ? (maxCap / 1000).toFixed(1).replace('.', ',') : maxCap} {unit}
         </div>
       )}
       
-      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 32, marginBottom: 24 }}>
-        {/* Unit selector */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 8, padding: 4 }}>
+      <div style={{ 
+        background: '#fff', 
+        border: '1px solid #e5e7eb', 
+        borderRadius: 12, 
+        padding: 32, 
+        marginBottom: 24,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '16px',
+          marginBottom: '24px'
+        }}>
+          <div style={{ fontSize: 72, fontWeight: 800, letterSpacing: -2, color: stable ? '#059669' : '#6b7280' }}>
+            {displayValue} {unit}
+          </div>
+          
+          <div style={{ 
+            display: 'flex', 
+            background: '#f3f4f6', 
+            borderRadius: 8, 
+            padding: 4,
+            marginTop: '16px'
+          }}>
             <button
               onClick={() => setUnit('g')}
               style={{
-                padding: '8px 16px',
-                fontSize: 14,
+                padding: '8px 24px',
+                fontSize: 16,
                 fontWeight: 600,
                 background: unit === 'g' ? '#2563eb' : 'transparent',
                 color: unit === 'g' ? '#fff' : '#6b7280',
                 border: 'none',
                 borderRadius: 4,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
               }}
             >
-              gram (g)
+              Gram (g)
             </button>
             <button
               onClick={() => setUnit('kg')}
               style={{
-                padding: '8px 16px',
-                fontSize: 14,
+                padding: '8px 24px',
+                fontSize: 16,
                 fontWeight: 600,
                 background: unit === 'kg' ? '#2563eb' : 'transparent',
                 color: unit === 'kg' ? '#fff' : '#6b7280',
                 border: 'none',
                 borderRadius: 4,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
               }}
             >
-              kilogram (kg)
+              Kilogram (kg)
             </button>
           </div>
-        </div>
-        
-        <div style={{ fontSize: 72, fontWeight: 800, letterSpacing: -2, margin: '0 0 8px 0', color: stable ? '#059669' : '#6b7280' }}>
-          {displayValue} {unit}
-        </div>
-        <div style={{ fontSize: 18, color: '#6b7280', marginBottom: 24 }}>
-          {stable ? '✅ Stable' : '⏳ Measuring...'}
+          
+          <div style={{ 
+            fontSize: 18, 
+            color: stable ? '#059669' : '#6b7280',
+            marginTop: '8px',
+            padding: '8px 16px',
+            background: stable ? '#ecfdf5' : '#f9fafb',
+            borderRadius: '6px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            {stable ? '✅ Stabil måling' : '⏳ Måler...'}
+          </div>
         </div>
         
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
