@@ -2,14 +2,11 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 
-// Output directory relative to the project root
-const OUT_DIR = resolve(__dirname, '../../weightd/app/static')
-
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: OUT_DIR,
-    emptyOutDir: true,  // Clean the output directory before building
+    outDir: resolve(__dirname, 'dist'), // Changed to output to local dist directory
+    emptyOutDir: true,
     sourcemap: false,
     rollupOptions: {
       output: {
@@ -27,6 +24,5 @@ export default defineConfig({
   esbuild: {
     jsx: 'automatic'
   },
-  // Ensure base path is correct for production
   base: '/static/'
 })
