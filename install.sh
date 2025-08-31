@@ -56,14 +56,30 @@ ensure_docker() {
 
 sync_repo() {
   if [[ -d "$INSTALL_DIR/.git" ]]; then
-    log "Updating repository at $INSTALL_DIR (branch $BRANCH)..."
-    git -C "$INSTALL_DIR" fetch --all --prune
-    git -C "$INSTALL_DIR" checkout "$BRANCH"
-    git -C "$INSTALL_DIR" pull --ff-only || git -C "$INSTALL_DIR" reset --hard origin/"$BRANCH"
+    log "Resetting repository at $INSTALL_DIR (branch $BRANCH)..."
+    # Reset any local changes
+    git -C "$INSTALL_DIR" reset --hard
+    # Clean any untracked files
+    git -C "$INSTALL_DIR" clean -fd
+    # Fetch latest changes
+    git -C "$INSTALL_DIR" fetch origin "$BRANCH"
+    # Reset to the remote branch
+    git -C "$INSTALL_DIR" reset --hard "origin/$BRANCH"
   else
     log "Cloning repository to $INSTALL_DIR..."
+    rm -rf "$INSTALL_DIR" 2>/dev/null || true
     mkdir -p "$INSTALL_DIR"
     git clone --branch "$BRANCH" --depth 1 "$REPO_URL" "$INSTALL_DIR"
+  fi
+  
+  # Ensure all submodules are initialized and updated
+  log "Updating submodules..."
+  git -C "$INSTALL_DIR" submodule update --init --recursive --force
+  
+  # Verify the webui directory exists
+  if [[ ! -d "$INSTALL_DIR/services/webui" ]]; then
+    log "Error: services/webui directory not found after repository sync"
+    exit 1
   fi
 }
 
