@@ -105,18 +105,13 @@ build_frontend() {
     npm run build
     
     # Verify the build was successful
-    if [ ! -d "$INSTALL_DIR/services/webui/dist" ]; then
-      # The postbuild script will handle copying files
-      
-      # Verify files were built
-      if [ ! -d "dist" ]; then
-        log "Error: Frontend build failed - dist directory not found"
-        exit 1
-      fi
-      
-      log "Frontend build complete"
-      cd "$INSTALL_DIR"
+    if [ ! -d "dist" ]; then
+      log "Error: Frontend build failed - dist directory not found"
+      exit 1
     fi
+    
+    log "Frontend build complete"
+    cd "$INSTALL_DIR"
   else
     log "npm not found, skipping frontend build"
     exit 1
