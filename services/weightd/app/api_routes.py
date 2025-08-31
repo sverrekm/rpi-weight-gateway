@@ -5,12 +5,12 @@ import os
 import socket
 import time
 from pathlib import Path
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
-from typing import List, Callable, Optional, Dict, Any, Tuple
-
-import json
-from pathlib import Path
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request, Response, HTTPException, Depends, status
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from typing import Optional, List, Dict, Any, Callable, Union, Tuple, Set, Awaitable
 from .models import Reading, CalibrateRequest, Config, Health, WiFiInfo, UserPreferences
 from .config import save_config as persist_config
 from . import wifi_detect
@@ -499,13 +499,16 @@ persistence_location /mosquitto/data/
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
+    class DisplayUnitUpdate(BaseModel):
+        unit: str = "kg"
+
     @router.post("/api/display/unit")
-    async def update_display_unit(payload: dict):
+    async def update_display_unit(unit_update: DisplayUnitUpdate):
         """Update the display unit (g/kg)."""
         if not ctx.cfg.display_enabled:
             return JSONResponse({"error": "display not enabled"}, status_code=400)
         try:
-            unit = payload.get("unit", "kg").lower()
+            unit = unit_update.unit.lower()
             if unit not in ["g", "kg"]:
                 return JSONResponse({"error": "unit must be 'g' or 'kg'"}, status_code=400)
             

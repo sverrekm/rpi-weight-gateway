@@ -343,20 +343,15 @@ const WiFiPage: React.FC = () => {
               )}
             </select>
             
-            <form onSubmit={(e) => { e.preventDefault(); }}>
+            <form onSubmit={(e) => { e.preventDefault(); }} className="w-full">
               <input 
                 type="password" 
                 value={psk} 
                 onChange={e => setPsk(e.target.value)} 
                 placeholder="Password (if required)" 
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  border: '1px solid #d1d5db',
-                  flex: '1 1 200px',
-                  maxWidth: '100%',
-                  boxSizing: 'border-box'
-                }}
+                className="w-full p-2 border rounded"
+                name="wifi-password"
+                autoComplete="current-password"
               />
             </form>
             

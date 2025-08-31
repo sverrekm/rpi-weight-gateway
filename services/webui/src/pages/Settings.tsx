@@ -84,7 +84,16 @@ const SettingsPage: React.FC = () => {
             <input value={cfg.mqtt_user ?? ''} onChange={onChange('mqtt_user')} />
           </Field>
           <Field label="MQTT Pass">
-            <input value={cfg.mqtt_pass ?? ''} onChange={onChange('mqtt_pass')} type="password" />
+            <form onSubmit={(e) => { e.preventDefault(); }} className="w-full">
+              <input 
+                value={cfg.mqtt_pass ?? ''} 
+                onChange={onChange('mqtt_pass')} 
+                type="password"
+                name="mqtt-password"
+                autoComplete="current-password"
+                className="w-full"
+              />
+            </form>
           </Field>
           <Field label="Topics (measure / status / cmd)">
             <input value={cfg.weight_topic} onChange={onChange('weight_topic')} style={{ width: 220 }} />
