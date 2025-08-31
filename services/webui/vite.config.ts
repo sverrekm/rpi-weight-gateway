@@ -5,14 +5,17 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: resolve(__dirname, 'dist'), // Changed to output to local dist directory
+    outDir: resolve(__dirname, 'dist'),
     emptyOutDir: true,
     sourcemap: false,
     rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+      },
       output: {
         entryFileNames: 'app.js',
-        assetFileNames: '[name][extname]',
-        chunkFileNames: '[name].js'
+        assetFileNames: 'assets/[name][extname]',
+        chunkFileNames: 'assets/[name].js'
       }
     }
   },

@@ -104,43 +104,69 @@ const IndexPage: React.FC = () => {
           
           <div style={{ 
             display: 'flex', 
-            background: '#f3f4f6', 
-            borderRadius: 8, 
-            padding: 4,
-            marginTop: '16px'
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '12px',
+            marginTop: '16px',
+            width: '100%',
+            maxWidth: '300px'
           }}>
-            <button
-              onClick={() => setUnit('g')}
-              style={{
-                padding: '8px 24px',
-                fontSize: 16,
-                fontWeight: 600,
-                background: unit === 'g' ? '#2563eb' : 'transparent',
-                color: unit === 'g' ? '#fff' : '#6b7280',
-                border: 'none',
-                borderRadius: 4,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              Gram (g)
-            </button>
-            <button
-              onClick={() => setUnit('kg')}
-              style={{
-                padding: '8px 24px',
-                fontSize: 16,
-                fontWeight: 600,
-                background: unit === 'kg' ? '#2563eb' : 'transparent',
-                color: unit === 'kg' ? '#fff' : '#6b7280',
-                border: 'none',
-                borderRadius: 4,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              Kilogram (kg)
-            </button>
+            <div style={{ 
+              fontSize: 14, 
+              fontWeight: 600, 
+              color: '#4b5563',
+              marginBottom: '4px'
+            }}>
+              Display Unit
+            </div>
+            <div style={{ 
+              display: 'flex', 
+              background: '#f3f4f6', 
+              borderRadius: 8, 
+              padding: 4,
+              width: '100%',
+              justifyContent: 'space-between'
+            }}>
+              <button
+                onClick={() => setUnit('g')}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  background: unit === 'g' ? '#2563eb' : 'transparent',
+                  color: unit === 'g' ? '#fff' : '#4b5563',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap',
+                  boxShadow: unit === 'g' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >
+                Grams (g)
+              </button>
+              <div style={{ width: '8px' }} />
+              <button
+                onClick={() => setUnit('kg')}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  background: unit === 'kg' ? '#2563eb' : 'transparent',
+                  color: unit === 'kg' ? '#fff' : '#4b5563',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap',
+                  boxShadow: unit === 'kg' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >
+                Kilograms (kg)
+              </button>
+            </div>
           </div>
           
           <div style={{ 
