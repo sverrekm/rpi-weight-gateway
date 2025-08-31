@@ -263,15 +263,21 @@ app.include_router(api_routes.create_router(ctx))
 # Static files - mount AFTER API routes to avoid conflicts
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 print(f"[DEBUG] STATIC_DIR: {STATIC_DIR}, exists: {os.path.isdir(STATIC_DIR)}")
+
+# Force serve our React app at root
+@app.get("/")
+async def serve_root():
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"message": "React app not found", "static_dir": STATIC_DIR}
+
 if os.path.isdir(STATIC_DIR):
-    # Mount static files at root for vanilla JS UI (styles.css, app.js, etc.)
-    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
-    print(f"[DEBUG] Mounted static files at /")
+    # Mount static files for assets (js, css, etc.)
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    print(f"[DEBUG] Mounted static files at /static")
 else:
-    # Fallback if static directory doesn't exist
-    @app.get("/")
-    async def serve_fallback():
-        return {"message": "Static files not found", "static_dir": STATIC_DIR}
+    print(f"[DEBUG] Static directory not found: {STATIC_DIR}")
 
 
 @app.on_event("startup")
