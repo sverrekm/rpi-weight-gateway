@@ -114,9 +114,34 @@ persistence_location /mosquitto/data/
 
     @router.post("/api/calibrate")
     async def calibrate(req: CalibrateRequest):
-        scale = ctx.calibrate(req.known_grams)
-        ctx.save_config()
-        return {"status": "ok", "scale": scale}
+        from fastapi import BackgroundTasks
+        
+        async def run_calibration():
+            try:
+                scale = ctx.calibrate(req.known_grams)
+                ctx.save_config()
+                return {"status": "ok", "scale": scale}
+            except TimeoutError as e:
+                logger.error(f"Calibration timeout: {e}")
+                return {"status": "error", "message": str(e) or "Calibration timed out"}
+            except Exception as e:
+                logger.error(f"Calibration error: {e}", exc_info=True)
+                return {"status": "error", "message": str(e) or "Calibration failed"}
+        
+        # Run in a thread to avoid blocking the event loop
+        import asyncio
+        from concurrent.futures import ThreadPoolExecutor
+        
+        with ThreadPoolExecutor() as pool:
+            try:
+                result = await asyncio.get_event_loop().run_in_executor(
+                    pool, 
+                    lambda: asyncio.run(run_calibration())
+                )
+                return result
+            except Exception as e:
+                logger.error(f"Failed to run calibration: {e}", exc_info=True)
+                return {"status": "error", "message": "Failed to start calibration process"}
 
     @router.get("/api/debug/raw")
     async def debug_raw():

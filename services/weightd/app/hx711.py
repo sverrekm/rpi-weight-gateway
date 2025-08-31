@@ -58,13 +58,50 @@ class HX711Reader:
         # Same user-facing behavior as tare: zero the current load
         self.offset = self._read_raw_average(10)
 
-    def calibrate(self, known_grams: float) -> float:
-        """Place known mass, compute scale so reading equals known_grams."""
-        raw = self._read_raw_average(20) if not self.demo_mode else known_grams
-        if raw - self.offset == 0:
+    def calibrate(self, known_grams: float, samples: int = 20, timeout_sec: float = 2.0) -> float:
+        """Place known mass, compute scale so reading equals known_grams.
+        
+        Args:
+            known_grams: Known weight in grams for calibration
+            samples: Number of samples to average for calibration
+            timeout_sec: Maximum time to wait for calibration to complete
+            
+        Returns:
+            The new scale factor
+            
+        Raises:
+            TimeoutError: If calibration takes longer than timeout_sec
+            RuntimeError: If calibration fails (e.g., no change in reading)
+        """
+        if self.demo_mode:
             self.scale = 1.0
-        else:
-            self.scale = known_grams / (raw - self.offset)
+            return self.scale
+            
+        start_time = time.time()
+        raw_readings = []
+        
+        # Collect samples with timeout
+        while len(raw_readings) < samples:
+            if time.time() - start_time > timeout_sec:
+                raise TimeoutError(f"Calibration timed out after {timeout_sec} seconds")
+                
+            try:
+                raw = self._read_raw()
+                raw_readings.append(raw)
+            except TimeoutError:
+                continue  # Retry on timeout
+                
+        # Calculate average, excluding outliers
+        if not raw_readings:
+            raise RuntimeError("No valid readings during calibration")
+            
+        raw_avg = sum(raw_readings) / len(raw_readings)
+        
+        # Calculate scale factor
+        if abs(raw_avg - self.offset) < 10:  # Threshold to avoid division by near-zero
+            raise RuntimeError("Insufficient change in reading for calibration")
+            
+        self.scale = known_grams / (raw_avg - self.offset)
         return self.scale
 
     def read_grams(self) -> float:
@@ -81,23 +118,29 @@ class HX711Reader:
         vals = [self._read_raw() for _ in range(max(1, n))]
         return float(sum(vals) / len(vals))
 
-    def _read_raw(self) -> float:
+    def _read_raw(self, timeout_sec: float = 0.1) -> float:
         if self.demo_mode or GPIO is None:
             # Synthetic value: small drifting sine wave with noise
             t = time.time() - self._t0
             return 100.0 + 10.0 * math.sin(t / 3.0) + (math.sin(t * 7) * 0.5)
-        # Wait for data ready (DOUT goes low)
-        timeout = time.time() + 0.1
+            
+        # Wait for data ready (DOUT goes low) with timeout
+        start_time = time.time()
         while GPIO.input(self.dout) == 1:
-            if time.time() > timeout:
-                break
+            if time.time() - start_time > timeout_sec:
+                raise TimeoutError("HX711 data ready timeout")
+            time.sleep(0.001)  # Small sleep to prevent 100% CPU usage
+            
         count = 0
-        # 24 pulses
+        # 24 pulses to read the data
         for _ in range(24):
             GPIO.output(self.sck, True)
+            time.sleep(0.0001)  # Small delay for clock pulse
             count = (count << 1) | GPIO.input(self.dout)
             GPIO.output(self.sck, False)
-        # set gain 128 (one more pulse)
+            time.sleep(0.0001)  # Small delay between clock pulses
+            
+        # Set gain to 128 (one more pulse)
         GPIO.output(self.sck, True)
         GPIO.output(self.sck, False)
         # convert signed 24-bit
