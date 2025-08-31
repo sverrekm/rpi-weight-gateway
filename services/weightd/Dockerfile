@@ -1,14 +1,17 @@
-# First stage: Build frontend
-FROM node:18-bookworm-slim AS frontend-builder
+# First stage: Build frontend - use explicit ARMv7 image
+FROM node:18-bullseye-slim AS frontend-builder
 
 # Set working directory
 WORKDIR /app
 
+# Install build dependencies
+RUN apt-get update && apt-get install -y python3 make g++
+
 # Copy frontend files
 COPY services/webui /app
 
-# Install dependencies and build
-RUN npm install --force && \
+# Install dependencies and build with node-gyp
+RUN npm install --force --build-from-source && \
     npm run build
 
 # Second stage: Build backend
