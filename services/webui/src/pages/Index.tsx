@@ -146,6 +146,17 @@ const IndexPage: React.FC = () => {
     wsRef.current = ws;
   };
 
+  // Handle unit changes and save to preferences
+  const onUnitChange = async (newUnit: 'g' | 'kg') => {
+    setUnit(newUnit);
+    setDisplayUnit(newUnit);
+    try {
+      await updatePreferences({ unit: newUnit });
+    } catch (e) {
+      console.error('Failed to save preferences:', e);
+    }
+  };
+
   useEffect(() => {
     // Load initial data
     (async () => {
@@ -153,7 +164,7 @@ const IndexPage: React.FC = () => {
         setReading(await getReading());
         const prefs = await getPreferences();
         // Ensure the unit is either 'g' or 'kg'
-        const validUnit = prefs.unit === 'kg' ? 'kg' : 'g';
+        const validUnit = prefs?.unit === 'kg' ? 'kg' : 'g';
         setUnit(validUnit);
         setDisplayUnit(validUnit);
       } catch (e) {
@@ -192,11 +203,12 @@ const IndexPage: React.FC = () => {
     return () => clearInterval(t)
   }, [])
 
-  // Update display unit and save preference when unit changes
+  // Update display unit when unit changes
   useEffect(() => {
     if (unit !== displayUnit) {
       const updateUnit = async () => {
         try {
+          // Only update the display unit, preferences are now handled by onUnitChange
           await Promise.all([
             updateDisplayUnit(unit),
             updatePreferences({ unit })
@@ -281,12 +293,10 @@ const IndexPage: React.FC = () => {
               display: 'flex', 
               background: '#f3f4f6', 
               borderRadius: 8, 
-              padding: 4,
-              width: '100%',
-              justifyContent: 'space-between'
+              padding: 4
             }}>
               <button
-                onClick={() => setUnit('g')}
+                onClick={() => onUnitChange('g')}
                 style={{
                   flex: 1,
                   padding: '10px 16px',
@@ -306,7 +316,7 @@ const IndexPage: React.FC = () => {
               </button>
               <div style={{ width: '8px' }} />
               <button
-                onClick={() => setUnit('kg')}
+                onClick={() => onUnitChange('kg')}
                 style={{
                   flex: 1,
                   padding: '10px 16px',
