@@ -365,21 +365,35 @@ persistence_location /mosquitto/data/
         client_ip = websocket.client.host if websocket.client else 'unknown'
         logger.info(f"WebSocket connection attempt from {client_ip}")
         
+        # Initialize error tracking
+        last_error_time = 0
+        error_count = 0
+        max_retries = 5
+        retry_delay = 1.0
+        
         try:
+            # Set a reasonable receive timeout
+            websocket.client_state.receive_timeout = 30.0
+            
             await websocket.accept()
             logger.info(f"WebSocket accepted from {client_ip}")
+            
+            # Add to hub after successful accept
             await hub.connect(websocket)
             logger.info(f"WebSocket connected: {client_ip}")
             
             # Initial handshake with client
             try:
-                await websocket.send_json({"type": "handshake", "status": "connected", "timestamp": dt.datetime.utcnow().isoformat() + "Z"})
+                await websocket.send_json({
+                    "type": "handshake",
+                    "status": "connected",
+                    "timestamp": dt.datetime.utcnow().isoformat() + "Z"
+                })
             except Exception as e:
                 logger.error(f"Error during WebSocket handshake with {client_ip}: {str(e)}")
                 raise
             
-            last_error_time = 0
-            error_count = 0
+            last_ping = time.time()
             
             while True:
                 try:
@@ -388,16 +402,21 @@ persistence_location /mosquitto/data/
                         data = await asyncio.wait_for(websocket.receive_text(), timeout=0.1)
                         if data == "ping":
                             await websocket.send_text("pong")
+                            last_ping = time.time()
                         continue
                     except asyncio.TimeoutError:
+                        # Check connection health
+                        if time.time() - last_ping > 30:  # 30 seconds since last ping
+                            await websocket.send_text("ping")
+                            last_ping = time.time()
                         pass
                     except Exception as e:
                         logger.warning(f"Error in WebSocket receive for {client_ip}: {str(e)}")
                         error_count += 1
-                        if error_count > 10:  # Too many errors, disconnect
+                        if error_count > max_retries:
                             logger.error(f"Too many errors ({error_count}) from {client_ip}, disconnecting")
                             break
-                        await asyncio.sleep(1)
+                        await asyncio.sleep(retry_delay)
                         continue
                     
                     # Reset error count on successful operation
@@ -415,9 +434,15 @@ persistence_location /mosquitto/data/
                             stable=ctx.stable
                         )
                         
-                        # Send to this client only
-                        await websocket.send_json(reading.dict())
-                        
+                        # Send to this client only with error handling
+                        try:
+                            await websocket.send_json(reading.dict())
+                        except RuntimeError as e:
+                            if "WebSocket is not connected" in str(e):
+                                logger.info(f"WebSocket disconnected during send: {client_ip}")
+                                break
+                            raise
+                            
                     except Exception as e:
                         current_time = time.time()
                         if current_time - last_error_time > 60:  # Log same error at most once per minute
@@ -436,8 +461,14 @@ persistence_location /mosquitto/data/
                 except Exception as e:
                     current_time = time.time()
                     if current_time - last_error_time > 60:  # Log same error at most once per minute
-                        logger.error(f"Error in WebSocket loop for {client_ip}: {str(e)}")
+                        logger.error(f"Error in WebSocket loop for {client_ip}: {str(e)}", exc_info=True)
                         last_error_time = current_time
+                    
+                    # Check for connection errors that require reconnection
+                    if any(err in str(e).lower() for err in ["connection reset", "broken pipe", "protocol error"]):
+                        logger.warning(f"Connection error with {client_ip}, will attempt to reconnect")
+                        break
+                        
                     await asyncio.sleep(1)  # Prevent tight error loop
                     
         except Exception as e:
