@@ -48,6 +48,19 @@ RUN chmod +x /usr/local/bin/setup_ap.sh && \
     systemctl enable dnsmasq
 
 # Install required system packages
+RUN apt-get update && apt-get install -y \
+    net-tools \
+    iproute2 \
+    python3-psutil \
+    python3-netifaces \
+    --no-install-recommends && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Python packages
+RUN pip install --no-cache-dir \
+    netifaces \
+    psutil
 RUN echo 'Acquire::CompressionTypes::Order:: "gz";' > /etc/apt/apt.conf.d/99force-gz \
     && apt-get update \
     && apt-get install -y --no-install-recommends \

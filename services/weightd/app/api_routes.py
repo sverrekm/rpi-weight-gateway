@@ -12,10 +12,13 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any, Callable, Union, Tuple, Set, Awaitable
 from .models import Reading, CalibrateRequest, Config, Health, WiFiInfo, UserPreferences
-from .config import save_config as persist_config
+from .config import save_config as persist_config, load_config
 from . import wifi_detect
 import subprocess
 import logging
+import socket
+import netifaces as ni
+import psutil
 
 
 class WeightHub:
