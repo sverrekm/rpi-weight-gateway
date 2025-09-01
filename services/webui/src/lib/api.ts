@@ -72,19 +72,42 @@ export const zero = async () => {
   return response.json();
 };
 
-export const updateDisplayUnit = async (unit: string) => {
+export const updateDisplayUnit = async (unit: 'g' | 'kg') => {
   const response = await fetch('/api/display/unit', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ unit })
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ unit }),
   });
-  
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || 'Failed to update display unit');
+    throw new Error('Failed to update display unit');
+  }
+  return response.json();
+};
+
+export const getPreferences = async (): Promise<UserPreferences> => {
+  // Get the current config to determine the current unit
+  const config = await getConfig();
+  return { unit: (config.unit === 'kg' ? 'kg' : 'g') as 'g' | 'kg' };
+};
+
+export const updatePreferences = async (prefs: UserPreferences): Promise<UserPreferences> => {
+  // Update the config with the new unit
+  const config = await getConfig();
+  const updatedConfig = { ...config, unit: prefs.unit };
+  await saveConfig(updatedConfig);
+  
+  // Also update the display unit if display is enabled
+  if (config.display_enabled) {
+    try {
+      await updateDisplayUnit(prefs.unit);
+    } catch (e) {
+      console.error('Failed to update display unit:', e);
+    }
   }
   
-  return response.json();
+  return prefs;
 };
 
 export interface ApStatus {
@@ -103,15 +126,6 @@ export const setApMode = (enabled: boolean): Promise<{ status: string }> =>
     method: 'POST'
   }).then(r => r.json())
 
-export const getPreferences = (): Promise<UserPreferences> =>
-  fetch('/api/preferences').then(r => r.json())
-
-export const updatePreferences = (prefs: UserPreferences) =>
-  fetch('/api/preferences', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(prefs)
-  }).then(r => r.json())
 
 export async function calibrate(known_grams: number) {
   const r = await fetch(`${base}/api/calibrate`, {
